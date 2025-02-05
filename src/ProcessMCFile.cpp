@@ -1,4 +1,3 @@
-#include <Eigen/Dense>
 #include <getopt.h>
 #include <iomanip>
 #include <iostream>
