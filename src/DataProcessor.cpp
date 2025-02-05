@@ -395,10 +395,14 @@ void DataProcessor::dailyCheck() {
         // Add the event's fire counts to the overall hodoscope histograms
         for (int irow = 0; irow < 10; ++irow) {
             for (int jcol = 0; jcol < 10; ++jcol) {
-                hist_top_fire->AddBinContent(irow + 1, jcol + 1,
-                                             top_fire[irow][jcol]);
-                hist_bot_fire->AddBinContent(irow + 1, jcol + 1,
-                                             bot_fire[irow][jcol]);
+                int tempTopBin = hist_top_fire->GetBin(irow + 1, jcol + 1);
+                hist_top_fire->AddBinContent(tempTopBin, top_fire[irow][jcol]);
+                int tempBotBin = hist_bot_fire->GetBin(irow + 1, jcol + 1);
+                hist_bot_fire->AddBinContent(tempBotBin, bot_fire[irow][jcol]);
+                //hist_top_fire->AddBinContent(irow + 1, jcol + 1,
+                                             //top_fire[irow][jcol]);
+                //hist_bot_fire->AddBinContent(irow + 1, jcol + 1,
+                                             //bot_fire[irow][jcol]);
             }
         }
     } // End of event loop
