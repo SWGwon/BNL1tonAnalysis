@@ -139,7 +139,12 @@ void DataProcessor::processFile() {
     }
 
     int trigger_type = -1;
-    for (int ievt = 0; ievt < config_.eventNumber; ++ievt) {
+    int event_number = 0;
+    if (config_.eventNumber > inputTree->GetEntries())
+        event_number = inputTree->GetEntries();
+    else
+        event_number = config_.eventNumber;
+    for (int ievt = 0; ievt < event_number; ++ievt) {
         inputTree->GetEntry(ievt);
         // checking trigger
         Waveform topPaddleWaveform(trigDataStorage[0]);
@@ -276,7 +281,12 @@ void DataProcessor::dailyCheck() {
     };
 
     // Event loop
-    for (int ievt = 0; ievt < config_.eventNumber; ++ievt) {
+    int event_number = 0;
+    if (config_.eventNumber > inputTree->GetEntries())
+        event_number = inputTree->GetEntries();
+    else
+        event_number = config_.eventNumber;
+    for (int ievt = 0; ievt < event_number; ++ievt) {
         inputTree->GetEntry(ievt);
         if (ievt % 1000 == 0)
             std::cout << event_id << std::endl;
@@ -485,7 +495,12 @@ void DataProcessor::dailyCheck30t() {
         histPMTPE[pmt] = new TH1D(pmt.c_str(), (pmt + ";mV ns;counts").c_str(), 50, 0, 0);
     }
 
-    for (int ievt = 0; ievt < config_.eventNumber; ++ievt) {
+    int event_number = 0;
+    if (config_.eventNumber > inputTree->GetEntries())
+        event_number = inputTree->GetEntries();
+    else
+        event_number = config_.eventNumber;
+    for (int ievt = 0; ievt < event_number; ++ievt) {
         inputTree->GetEntry(ievt);
         if (ievt % 1000 == 0)
             std::cout << event_id << std::endl;
