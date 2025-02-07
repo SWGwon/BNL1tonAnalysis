@@ -60,6 +60,7 @@ DataProcessor::DataProcessor(const AppConfig &config) : config_(config) {
                "adc_b2_ch8",  "adc_b2_ch9",  "adc_b2_ch10", "adc_b2_ch11",
                "adc_b2_ch12", "adc_b2_ch13", "adc_b2_ch14", "adc_b2_ch15",
                "adc_b3_ch0",  "adc_b3_ch1",  "adc_b3_ch2",  "adc_b3_ch3"};
+    triggers_30t_ = {"adc_b4_ch13", "adc_b4_ch22"};
     triggers_ = {"adc_b5_ch33", "adc_b5_ch34", "adc_b5_ch35"};
 
     for (const auto &pmt : pmts_) {
@@ -484,8 +485,9 @@ void DataProcessor::dailyCheck30t() {
     TH1D* histMaxWaveformIndex = new TH1D("histMaxWaveformIndex",
                                           "histMaxWaveformIndex;relative time x 2ns;counts",
                                           70, 60, 500);
-    TH1D* histBotMV = new TH1D("histBotMV", "histBotMV;mV ns;counts", 50, 0, 0);
+    TH1D* histBotMV = new TH1D("histBotMV", "histBotMV;mV ns;counts", 200, 0, 2000);
     TH1D* histSideMV = new TH1D("histSideMV", "histSideMV;mV ns;counts", 50, 0, 0);
+    TH2D* histBotSideMV = new TH2D("histBotSideMV", "histBotSideMV;Bot mV;Side mV", 50,0,0, 50, 0, 0);
 
     // Set branch addresses for each PMT channel and create corresponding histograms
     for (auto& pmt : pmts30t) {
@@ -493,6 +495,12 @@ void DataProcessor::dailyCheck30t() {
         dataStorage.push_back(tempArray);
         inputTree->SetBranchAddress(pmt.c_str(), tempArray);
         histPMTPE[pmt] = new TH1D(pmt.c_str(), (pmt + ";mV ns;counts").c_str(), 50, 0, 0);
+    }
+
+    for (auto &trig : triggers_30t_) {
+        UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+        trigDataStorage.push_back(tempArray);
+        inputTree->SetBranchAddress(trig.c_str(), tempArray);
     }
 
     int event_number = 0;
@@ -510,19 +518,32 @@ void DataProcessor::dailyCheck30t() {
         double tempSideMV = 0;
         std::vector<double> summedWaveform;
 
+        Waveform alpha(trigDataStorage[0]);
+        if (Waveform::hasValueLessThan(alpha.getSamples(), 3000)) {
+            std::cout << "alpha" << std::endl;
+            alpha.subtractFlatBaseline(0, 100);
+            alpha.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
+            alpha.correctDaisyChainTrgDelay("adc_b4_ch13");
+            TCanvas* can = new TCanvas;
+            TGraph* gr = alpha.drawMVAsGraph(Form("alpha_waveform_event_%d", event_id));
+            gr->Draw();
+            can->SaveAs(Form("alpha_%d.pdf", ievt));
+            continue;
+        }
+
         // Process waveform for each PMT channel
         for (size_t i = 0; i < pmts30t.size(); ++i) {
             std::string ch_name = pmts30t[i];
             Waveform wf(dataStorage[i]);
             wf.subtractFlatBaseline(0, 100);
-            wf.setAmpPE(1.0, 1.0);
+            wf.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
             wf.correctDaisyChainTrgDelay(ch_name);
 
             // Sum waveforms: use the first channel as the base and add subsequent channels
             if (i == 0) {
-                summedWaveform = wf.getAmpPE();
+                summedWaveform = wf.getAmpMV();
             } else {
-                std::vector<double> tempWf = wf.getAmpPE();
+                std::vector<double> tempWf = wf.getAmpMV();
                 std::transform(summedWaveform.begin(), summedWaveform.end(),
                                tempWf.begin(),
                                summedWaveform.begin(), // store result back in summedWaveform
@@ -532,15 +553,20 @@ void DataProcessor::dailyCheck30t() {
             // Set integration range (here using entire sample length)
             int start = 0;
             int end = MAX_SAMPLE_SIZE;
+            double mV_value = 0;
+            std::vector<double> ampMV = wf.getAmpMV();
+            for (int i = start; i <= ampMV.size() - 1; ++i) {
+                mV_value += ampMV[i];
+            }
             double pe_value = wf.getPE(start, wf.getAmpPE().size() - 1);
             pe_[ch_name].push_back(pe_value / 2.0);
             histPMTPE[ch_name]->Fill(pe_value / 2.0);
 
             // Accumulate integrated values for bottom and side channels
             if (tempIndex < 12) {
-                tempBotMV += pe_value / 2.0;
+                tempBotMV += mV_value;
             } else {
-                tempSideMV += pe_value / 2.0;
+                tempSideMV += mV_value;
             }
             tempIndex++;
         } // end PMT channel loop
@@ -548,6 +574,7 @@ void DataProcessor::dailyCheck30t() {
         // Fill histograms for bottom and side integrated values
         histBotMV->Fill(tempBotMV);
         histSideMV->Fill(tempSideMV);
+        histBotSideMV->Fill(tempBotMV,tempSideMV);
 
         // Determine the index of the maximum value in the summed waveform
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
@@ -599,6 +626,11 @@ void DataProcessor::dailyCheck30t() {
     histSideMV->Draw();
     std::cout << "saving " << filename + "_SideMV.pdf" << std::endl;
     c5->SaveAs((filename + "_SideMV.pdf").c_str());
+
+    TCanvas* c6 = new TCanvas();
+    c6->SetLogz();
+    histBotSideMV->Draw("colz");
+    c6->SaveAs((filename + "_2dMV.pdf").c_str());
 
     inputFile->Close();
 }

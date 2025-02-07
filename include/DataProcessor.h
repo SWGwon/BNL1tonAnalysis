@@ -18,6 +18,7 @@ private:
     std::vector<std::string> pmtsAll_; //daily check
     std::vector<std::string> pmts30t; //daily check 30t
     std::vector<std::string> triggers_;
+    std::vector<std::string> triggers_30t_;
     std::map<std::string, std::vector<double>> pe_; 
     std::map<std::string, double> spe_mean_;
     std::map<std::string, std::map<std::string, double>> spe_fit_results_; // ch_name 기준으로 결과 저장

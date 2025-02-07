@@ -20,10 +20,10 @@ public:
     Waveform(const unsigned short* data, int maxSampleSize = DEFAULT_MAX_SAMPLE_SIZE);
 
     // Constructor: Creates a waveform from an int vector.
-    Waveform(const std::vector<int>& samples);
+    Waveform(const std::vector<double>& samples);
 
     // Getter: Returns the current waveform samples (either raw or baseline-corrected).
-    const std::vector<int>& getSamples() const;
+    const std::vector<double>& getSamples() const;
 
     // Getter: Returns the PE-converted data (after calling setAmpPE()).
     const std::vector<double>& getAmpPE() const;
@@ -50,16 +50,18 @@ public:
     void correctDaisyChainTrgDelay(const std::string& ch_name, int dt_ns = DEFAULT_DT_NS, int sampleToNS = DEFAULT_SAMPLE_TO_NS);
 
     // Converts the amp_pe_ vector into a TGraph for visualization.
-    TGraph* drawAsGraph(const std::string& title) const;
+    TGraph* drawPEAsGraph(const std::string& title) const;
+
+    TGraph* drawMVAsGraph(const std::string& title) const;
 
     // Static helper: Checks if the given vector contains any value smaller than the threshold.
-    static bool hasValueLessThan(const std::vector<int>& vec, int threshold);
+    static bool hasValueLessThan(const std::vector<double>& vec, int threshold);
 
 private:
     // Computes the baseline as the median of a given range [start, end] (inclusive).
     int computeFlatBaseline(int start, int end) const;
 
-    std::vector<int> samples_;         // Raw or baseline-corrected waveform samples
+    std::vector<double> samples_;         // Raw or baseline-corrected waveform samples
     std::vector<double> amp_pe_;       // PE-corrected waveform (after calling setAmpPE())
 };
 

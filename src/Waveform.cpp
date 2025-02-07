@@ -16,18 +16,18 @@ Waveform::Waveform(const unsigned short *data, int maxSampleSize) {
 }
 
 // Constructor: Copies an int vector directly.
-Waveform::Waveform(const std::vector<int> &samples) : samples_(samples) {}
+Waveform::Waveform(const std::vector<double> &samples) : samples_(samples) {}
 
 // Getter: Returns waveform samples.
-const std::vector<int> &Waveform::getSamples() const { return samples_; }
+const std::vector<double> &Waveform::getSamples() const { return samples_; }
 
 // Getter: Returns the PE-corrected waveform.
 const std::vector<double> &Waveform::getAmpPE() const { return amp_pe_; }
 
 // Static helper: Checks if there is any value below the threshold.
-bool Waveform::hasValueLessThan(const std::vector<int> &vec, int threshold) {
+bool Waveform::hasValueLessThan(const std::vector<double> &vec, int threshold) {
     return std::any_of(vec.begin(), vec.end(),
-                       [threshold](int value) { return value < threshold; });
+                       [threshold](double value) { return value < threshold; });
 }
 
 // Internal helper: Calculates the median value from a given range of samples
@@ -151,13 +151,24 @@ void Waveform::correctDaisyChainTrgDelay(const std::string &ch_name, int dt_ns,
 }
 
 // Converts amp_pe_ data into a TGraph and returns it.
-TGraph *Waveform::drawAsGraph(const std::string &title) const {
+TGraph *Waveform::drawPEAsGraph(const std::string &title) const {
     int n = amp_pe_.size();
     std::vector<double> x(n);
     for (int i = 0; i < n; ++i) {
         x[i] = i;
     }
     TGraph *graph = new TGraph(n, x.data(), amp_pe_.data());
+    graph->SetTitle(title.c_str());
+    return graph;
+}
+
+TGraph *Waveform::drawMVAsGraph(const std::string &title) const {
+    int n = samples_.size();
+    std::vector<double> x(n);
+    for (int i = 0; i < n; ++i) {
+        x[i] = i;
+    }
+    TGraph *graph = new TGraph(n, x.data(), samples_.data());
     graph->SetTitle(title.c_str());
     return graph;
 }
