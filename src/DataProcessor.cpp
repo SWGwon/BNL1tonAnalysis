@@ -11,46 +11,6 @@
 #include <sstream>
 
 DataProcessor::DataProcessor(const AppConfig &config) : config_(config) {
-    pmts_ = {"adc_b1_ch1",  "adc_b1_ch2",  "adc_b1_ch3",  "adc_b1_ch4",
-             "adc_b1_ch5",  "adc_b1_ch6",  "adc_b1_ch7",  "adc_b1_ch8",
-             "adc_b1_ch9",  "adc_b1_ch10", "adc_b1_ch11", "adc_b1_ch12",
-             "adc_b1_ch13", "adc_b1_ch14", "adc_b1_ch15", "adc_b2_ch0",
-             "adc_b2_ch1",  "adc_b2_ch2",  "adc_b2_ch3",  "adc_b2_ch4",
-             "adc_b2_ch5",  "adc_b2_ch6",  "adc_b2_ch7",  "adc_b2_ch8",
-             "adc_b2_ch9",  "adc_b2_ch10", "adc_b2_ch11", "adc_b2_ch12",
-             "adc_b2_ch13", "adc_b2_ch14", "adc_b3_ch0",  "adc_b3_ch1",
-             "adc_b3_ch2",  "adc_b3_ch3",  "adc_b3_ch4",  "adc_b3_ch5",
-             "adc_b3_ch6",  "adc_b3_ch7",  "adc_b3_ch8",  "adc_b3_ch9",
-             "adc_b3_ch10", "adc_b3_ch11", "adc_b3_ch12", "adc_b3_ch13",
-             "adc_b3_ch14", "adc_b3_ch15", "adc_b4_ch0",  "adc_b4_ch1",
-             "adc_b4_ch2",  "adc_b4_ch3",  "adc_b4_ch4",  "adc_b4_ch5",
-             "adc_b4_ch6",  "adc_b4_ch7",  "adc_b4_ch8",  "adc_b4_ch9",
-             "adc_b4_ch10", "adc_b4_ch11"};
-    pmtsAll_ = {"adc_b1_ch0",  "adc_b1_ch1",  "adc_b1_ch2",  "adc_b1_ch3",
-                "adc_b1_ch4",  "adc_b1_ch5",  "adc_b1_ch6",  "adc_b1_ch7",
-                "adc_b1_ch8",  "adc_b1_ch9",  "adc_b1_ch10", "adc_b1_ch11",
-                "adc_b1_ch12", "adc_b1_ch13", "adc_b1_ch14", "adc_b1_ch15",
-                "adc_b2_ch0",  "adc_b2_ch1",  "adc_b2_ch2",  "adc_b2_ch3",
-                "adc_b2_ch4",  "adc_b2_ch5",  "adc_b2_ch6",  "adc_b2_ch7",
-                "adc_b2_ch8",  "adc_b2_ch9",  "adc_b2_ch10", "adc_b2_ch11",
-                "adc_b2_ch12", "adc_b2_ch13", "adc_b2_ch14", "adc_b2_ch15",
-                "adc_b3_ch0",  "adc_b3_ch1",  "adc_b3_ch2",  "adc_b3_ch3",
-                "adc_b3_ch4",  "adc_b3_ch5",  "adc_b3_ch6",  "adc_b3_ch7",
-                "adc_b3_ch8",  "adc_b3_ch9",  "adc_b3_ch10", "adc_b3_ch11",
-                "adc_b3_ch12", "adc_b3_ch13", "adc_b3_ch14", "adc_b3_ch15",
-                "adc_b4_ch0",  "adc_b4_ch1",  "adc_b4_ch2",  "adc_b4_ch3",
-                "adc_b4_ch4",  "adc_b4_ch5",  "adc_b4_ch6",  "adc_b4_ch7",
-                "adc_b4_ch8",  "adc_b4_ch9",  "adc_b4_ch10", "adc_b4_ch11",
-                "adc_b4_ch12", "adc_b4_ch13", "adc_b4_ch14", "adc_b4_ch15",
-                "adc_b5_ch0",  "adc_b5_ch1",  "adc_b5_ch2",  "adc_b5_ch3",
-                "adc_b5_ch4",  "adc_b5_ch5",  "adc_b5_ch6",  "adc_b5_ch7",
-                "adc_b5_ch8",  "adc_b5_ch9",  "adc_b5_ch10", "adc_b5_ch11",
-                "adc_b5_ch12", "adc_b5_ch13", "adc_b5_ch14", "adc_b5_ch15",
-                "adc_b5_ch16", "adc_b5_ch17", "adc_b5_ch18", "adc_b5_ch19",
-                "adc_b5_ch20", "adc_b5_ch21", "adc_b5_ch22", "adc_b5_ch23",
-                "adc_b5_ch24", "adc_b5_ch25", "adc_b5_ch26", "adc_b5_ch27",
-                "adc_b5_ch28", "adc_b5_ch29", "adc_b5_ch30", "adc_b5_ch31",
-                "adc_b5_ch32"};
     pmts30t = {"adc_b1_ch0",  "adc_b1_ch1",  "adc_b1_ch2",  "adc_b1_ch3",
                "adc_b1_ch4",  "adc_b1_ch5",  "adc_b1_ch6",  "adc_b1_ch7",
                "adc_b1_ch8",  "adc_b1_ch9",  "adc_b1_ch10", "adc_b1_ch11",
@@ -61,7 +21,6 @@ DataProcessor::DataProcessor(const AppConfig &config) : config_(config) {
                "adc_b2_ch12", "adc_b2_ch13", "adc_b2_ch14", "adc_b2_ch15",
                "adc_b3_ch0",  "adc_b3_ch1",  "adc_b3_ch2",  "adc_b3_ch3"};
     triggers_30t_ = {"adc_b4_ch13", "adc_b4_ch22"};
-    triggers_ = {"adc_b5_ch33", "adc_b5_ch34", "adc_b5_ch35"};
 
     for (const auto &pmt : pmts_) {
         pe_[pmt] = std::vector<double>();
@@ -195,7 +154,7 @@ void DataProcessor::processFile() {
     inputFile->Close();
 }
 
-void DataProcessor::saveOutput() {
+void DataProcessor::saveBinaryOutput() {
     std::string fileID = extractFileID(config_.inputFileName);
     for (auto &pmt : pmts_) {
         std::string filename =
@@ -216,12 +175,16 @@ void DataProcessor::saveOutput() {
 }
 void DataProcessor::saveRootOutput() {
     std::string fileID = extractFileID(config_.inputFileName);
+    TFile* outputFile = new TFile((config_.outputFilePath + "/" + fileID + ".root").c_str(),"RECREATE");
+
+    outputFile->Close();
 }
 
 void DataProcessor::run() {
     setSPEResult(config_.inputSPECalibrationPath);
     processFile();
-    saveOutput();
+    saveBinaryOutput();
+    saveRootOutput();
 }
 
 void DataProcessor::dailyCheck() {
@@ -246,7 +209,7 @@ void DataProcessor::dailyCheck() {
     TH2D *hist_bot_fire =
         new TH2D("hist_bot_fire", "bot hodoscope", 10, 0, 10, 10, 0, 10);
 
-    for (const auto &pmt : pmtsAll_) {
+    for (const auto &pmt : pmts_) {
         UShort_t *tempArray =
             new UShort_t[MAX_SAMPLE_SIZE](); // zero-initialize the array
         dataStorage.push_back(tempArray);
@@ -299,8 +262,8 @@ void DataProcessor::dailyCheck() {
         double schn[97] = {0};
 
         // Process waveform for each PMT channel
-        for (size_t i = 0; i < pmtsAll_.size(); ++i) {
-            const std::string &ch_name = pmtsAll_[i];
+        for (size_t i = 0; i < pmts_.size(); ++i) {
+            const std::string &ch_name = pmts_[i];
             Waveform wf(dataStorage[i]);
             wf.subtractFlatBaseline(0, 100);
             double spe = (spe_mean_.count(ch_name) > 0) ? spe_mean_[ch_name]
@@ -443,7 +406,7 @@ void DataProcessor::dailyCheck() {
         for (int i = 0; i < setup.numPads; ++i) {
             canvas->cd(i + 1);
             gPad->SetLogy();
-            const std::string &ch_name = pmtsAll_[tempPMTCount];
+            const std::string &ch_name = pmts_[tempPMTCount];
             histPMTPE[ch_name]->Draw();
             ++tempPMTCount;
         }
@@ -487,7 +450,7 @@ void DataProcessor::dailyCheck30t() {
                                           70, 60, 500);
     TH1D* histBotMV = new TH1D("histBotMV", "histBotMV;mV ns;counts", 200, 0, 2000);
     TH1D* histSideMV = new TH1D("histSideMV", "histSideMV;mV ns;counts", 50, 0, 0);
-    TH2D* histBotSideMV = new TH2D("histBotSideMV", "histBotSideMV;Bot mV;Side mV", 50,0,0, 50, 0, 0);
+    TH2D* histBotSideMV = new TH2D("histBotSideMV", "histBotSideMV;Bot mV;Side mV", 600,0,60000, 600, 0, 60000);
 
     // Set branch addresses for each PMT channel and create corresponding histograms
     for (auto& pmt : pmts30t) {
@@ -629,7 +592,7 @@ void DataProcessor::dailyCheck30t() {
 
     TCanvas* c6 = new TCanvas();
     c6->SetLogz();
-    histBotSideMV->Draw("colz");
+    histBotSideMV->Draw();
     c6->SaveAs((filename + "_2dMV.pdf").c_str());
 
     inputFile->Close();

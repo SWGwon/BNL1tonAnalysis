@@ -12,6 +12,10 @@ public:
     void dailyCheck();
     void dailyCheck30t();
     void run();
+    void saveBinaryOutput();
+    void saveRootOutput();
+    void setPMTs(std::vector<std::string> pmts) {this->pmts_ = pmts;};
+    void setTriggers(std::vector<std::string> triggers) {this->triggers_ = triggers;};
 private:
     AppConfig config_;
     std::vector<std::string> pmts_; //data analysis
@@ -25,8 +29,6 @@ private:
 
     void setSPEResult(const std::string& calibrationPath);
     void processFile();
-    void saveOutput();
-    void saveRootOutput();
 
     std::string extractFileID(const std::string& filePath);
 };
