@@ -35,7 +35,7 @@ mkdir -p "${OUTPUT_DIR}"
 echo "Processing file: $INPUT_FILE"
 
 # Execute the processing command
-$EXECUTABLE -i "$INPUT_FILE" -o "$OUTPUT_DIR/" -n 10000 -t 2
+$EXECUTABLE -i "$INPUT_FILE" -o "$OUTPUT_DIR/" -n 10000 -t 2 -c ""
 
 # Check for errors in execution
 if [ $? -ne 0 ]; then

@@ -29,7 +29,6 @@ int main(int argc, char** argv) {
     processor.setPMTs(pmts_1ton);
     processor.setTriggers(triggers_1ton);
     processor.run();
-    processor.saveRootOutput();
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;

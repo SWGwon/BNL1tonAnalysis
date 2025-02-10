@@ -173,10 +173,70 @@ void DataProcessor::saveBinaryOutput() {
         file.close();
     }
 }
-void DataProcessor::saveRootOutput() {
-    std::string fileID = extractFileID(config_.inputFileName);
-    TFile* outputFile = new TFile((config_.outputFilePath + "/" + fileID + ".root").c_str(),"RECREATE");
 
+void DataProcessor::saveRootOutput() {
+    // Extract the file ID from the input file name.
+    std::string fileID = extractFileID(config_.inputFileName);
+
+    TFile* outputFile = nullptr;
+    // Create the output ROOT file.
+    if (config_.triggerType == -1)
+        outputFile = new TFile((config_.outputFilePath + "/output_all_event_" + fileID + ".root").c_str(), "RECREATE");
+    if (config_.triggerType == 0)
+        outputFile = new TFile((config_.outputFilePath + "/output_top_paddle_" + fileID + ".root").c_str(), "RECREATE");
+    if (config_.triggerType == 1)
+        outputFile = new TFile((config_.outputFilePath + "/output_alpha_" + fileID + ".root").c_str(), "RECREATE");
+    if (config_.triggerType == 2)
+        outputFile = new TFile((config_.outputFilePath + "/output_majority_" + fileID + ".root").c_str(), "RECREATE");
+    if (config_.triggerType == 3)
+        outputFile = new TFile((config_.outputFilePath + "/output_crossing_muon_" + fileID + ".root").c_str(), "RECREATE");
+
+    // Create a new TTree.
+    TTree* outputTree = new TTree("tree", "tree");
+
+    // Create a vector to hold the output PE values for each PMT.
+    // Using a std::vector is preferred over a variable-length array.
+    std::vector<double> outputPE(pmts_.size(), 0.0);
+
+    // Create a branch for each PMT.
+    int branchIndex = 0;
+    for (const auto &pmt : pmts_) {
+        // The branch name is the PMT name and the branch variable is the corresponding element in outputPE.
+        outputTree->Branch(pmt.c_str(), &outputPE[branchIndex]);
+        branchIndex++;
+    }
+
+    // Check that we have at least one PMT.
+    if (pmts_.empty()) {
+        std::cerr << "No PMTs available for output." << std::endl;
+        outputFile->Close();
+        return;
+    }
+
+    // Determine the number of events from the first PMT's vector.
+    // Assumes that all PMTs have the same number of events.
+    size_t numEvents = pe_[pmts_.front()].size();
+
+    // Loop over all events.
+    for (size_t ievt = 0; ievt < numEvents; ++ievt) {
+        branchIndex = 0;
+        // Loop over all PMTs to fill the output array.
+        for (const auto &pmt : pmts_) {
+            // Check that the current event index is within bounds for the PMT.
+            if (ievt < pe_[pmt].size()) {
+                outputPE[branchIndex] = pe_[pmt][ievt];
+            } else {
+                // In case of missing data, set a default value.
+                outputPE[branchIndex] = 0.0;
+            }
+            branchIndex++;
+        }
+        // Fill the tree with the event's data.
+        outputTree->Fill();
+    }
+
+    // Write the tree to the file and close it.
+    outputTree->Write();
     outputFile->Close();
 }
 

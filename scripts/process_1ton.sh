@@ -35,14 +35,15 @@ echo "Enter the directory containing .root files:"
 read -e INPUT_FILE_DIR
 INPUT_FILE_DIR=$(eval echo "$INPUT_FILE_DIR")
 
-OUTPUT_FILE_DIR="/Users/gwon/WbLS/1ton_analysis"
 
 # Prompt the user for the TIMESTAMP (e.g., "250204")
 echo "Enter TIMESTAMP to search for in file names: (YYMMDD)"
 read TIMESTAMP
 
+OUTPUT_FILE_DIR="/Users/gwon/WbLS/1ton_analysis/output/$TIMESTAMP"
+
 # Prompt for trigger and number of events to process
-echo "Enter trigger (0: tp, 1: alpha, 2: majority):"
+echo "Enter trigger (-1: all, 0: tp, 1: alpha, 2: majority, 3: crossing_muon):"
 read T
 
 echo "Enter number of events to process:"

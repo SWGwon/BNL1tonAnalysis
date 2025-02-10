@@ -105,7 +105,6 @@ std::vector<int> GetCrossingMuonEventIds(const std::string &fpath, int config) {
             break;
         }
 
-        // 그냥 지역 벡터 변수를 만든 뒤 배열의 내용을 복사
         std::vector<unsigned short> adc_b1_ch0_vec(adc_b1_ch0,
                                                    adc_b1_ch0 + 2000);
         // std::vector<unsigned short> adc_b5_ch33_vec(adc_b5_ch33, adc_b5_ch33
