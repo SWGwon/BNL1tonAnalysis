@@ -501,6 +501,9 @@ void DataProcessor::dailyCheck30t() {
     UInt_t event_id;
     inputTree->SetBranchAddress("event_id", &event_id);
 
+    TFile* outputFile = new TFile((config_.outputFilePath + "/output_30t_" + fileID + ".root").c_str(), "RECREATE");
+    TTree* outputTree = new TTree("tree", "tree");
+
     std::vector<UShort_t*> dataStorage;
     std::vector<UShort_t*> trigDataStorage;  // (Unused in this function)
 
@@ -508,9 +511,12 @@ void DataProcessor::dailyCheck30t() {
     TH1D* histMaxWaveformIndex = new TH1D("histMaxWaveformIndex",
                                           "histMaxWaveformIndex;relative time x 2ns;counts",
                                           70, 60, 500);
-    TH1D* histBotMV = new TH1D("histBotMV", "histBotMV;mV ns;counts", 200, 0, 2000);
-    TH1D* histSideMV = new TH1D("histSideMV", "histSideMV;mV ns;counts", 50, 0, 0);
-    TH2D* histBotSideMV = new TH2D("histBotSideMV", "histBotSideMV;Bot mV;Side mV", 600,0,60000, 600, 0, 60000);
+    TH1D* histBotMV = new TH1D("histBotMV", "histBotMV;mV ns;counts", 100, 0, 60000);
+    TH1D* histSideMV = new TH1D("histSideMV", "histSideMV;mV ns;counts", 100, 0, 60000);
+    TH2D* histBotSideMV = new TH2D("histBotSideMV", "histBotSideMV;Bot mV;Side mV", 100,0,60000, 100, 0, 60000);
+
+    int branchIndex = 0;
+    std::vector<double> outputPE(pmts30t.size(), 0.0);
 
     // Set branch addresses for each PMT channel and create corresponding histograms
     for (auto& pmt : pmts30t) {
@@ -518,7 +524,14 @@ void DataProcessor::dailyCheck30t() {
         dataStorage.push_back(tempArray);
         inputTree->SetBranchAddress(pmt.c_str(), tempArray);
         histPMTPE[pmt] = new TH1D(pmt.c_str(), (pmt + ";mV ns;counts").c_str(), 50, 0, 0);
+        outputTree->Branch(pmt.c_str(), &outputPE[branchIndex]);
+        branchIndex++;
     }
+
+    double bottomPE = 0;
+    outputTree->Branch("bottomPE", &bottomPE);
+    double sidePE = 0;
+    outputTree->Branch("sidePE", &sidePE);
 
     for (auto &trig : triggers_30t_) {
         UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
@@ -554,6 +567,7 @@ void DataProcessor::dailyCheck30t() {
             continue;
         }
 
+        int branchIndex = 0;
         // Process waveform for each PMT channel
         for (size_t i = 0; i < pmts30t.size(); ++i) {
             std::string ch_name = pmts30t[i];
@@ -584,6 +598,8 @@ void DataProcessor::dailyCheck30t() {
             double pe_value = wf.getPE(start, wf.getAmpPE().size() - 1);
             pe_[ch_name].push_back(pe_value / 2.0);
             histPMTPE[ch_name]->Fill(pe_value / 2.0);
+            
+            outputPE[branchIndex] = pe_value / 2.0;
 
             // Accumulate integrated values for bottom and side channels
             if (tempIndex < 12) {
@@ -592,12 +608,17 @@ void DataProcessor::dailyCheck30t() {
                 tempSideMV += mV_value;
             }
             tempIndex++;
+            branchIndex++;
         } // end PMT channel loop
 
         // Fill histograms for bottom and side integrated values
         histBotMV->Fill(tempBotMV);
+        bottomPE = tempBotMV;
         histSideMV->Fill(tempSideMV);
+        sidePE = tempSideMV;
         histBotSideMV->Fill(tempBotMV,tempSideMV);
+
+        outputTree->Fill();
 
         // Determine the index of the maximum value in the summed waveform
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
@@ -656,4 +677,10 @@ void DataProcessor::dailyCheck30t() {
     c6->SaveAs((filename + "_2dMV.pdf").c_str());
 
     inputFile->Close();
+
+    histBotMV->Write();
+    histSideMV->Write();
+    histBotSideMV->Write();
+    outputTree->Write();
+    outputFile->Close();
 }

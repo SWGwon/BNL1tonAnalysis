@@ -9,7 +9,7 @@
 Waveform::Waveform(const unsigned short *data, int maxSampleSize) {
     for (int i = 0; i < maxSampleSize; ++i) {
         if (data[i] != 0)
-            samples_.push_back(data[i]);
+            samples_.push_back((double)data[i]);
         else
             break;
     }
