@@ -85,6 +85,7 @@ void DataProcessor::processFile() {
 
     std::vector<UShort_t *> dataStorage;
     std::vector<UShort_t *> trigDataStorage;
+    std::vector<UShort_t *> botPaddleDataStorage;
 
     for (auto &pmt : pmts_) {
         UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
@@ -98,6 +99,18 @@ void DataProcessor::processFile() {
         inputTree->SetBranchAddress(trig.c_str(), tempArray);
     }
 
+    UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+    botPaddleDataStorage.push_back(tempArray);
+    inputTree->SetBranchAddress("adc_b1_ch0", tempArray);
+
+
+    //unsigned short adc_b1_ch0[2000] = {};
+    //inputTree->SetBranchAddress("adc_b1_ch0", adc_b1_ch0);
+
+    TCanvas* c = new TCanvas();
+    TH1D* hist_area_bp = new TH1D("hist_area_bp", "hist_area_bp", 100,0,100);
+
+
     int trigger_type = -1;
     int event_number = 0;
     if (config_.eventNumber > inputTree->GetEntries())
@@ -106,27 +119,61 @@ void DataProcessor::processFile() {
         event_number = config_.eventNumber;
     for (int ievt = 0; ievt < event_number; ++ievt) {
         inputTree->GetEntry(ievt);
-        // checking trigger
-        Waveform topPaddleWaveform(trigDataStorage[0]);
-        Waveform alphaWaveform(trigDataStorage[1]);
-        Waveform majorityWaveform(trigDataStorage[2]);
-        if (Waveform::hasValueLessThan(topPaddleWaveform.getSamples(), 3000))
-            trigger_type = 0;
-        if (Waveform::hasValueLessThan(alphaWaveform.getSamples(), 3000))
-            trigger_type = 1;
-        if (Waveform::hasValueLessThan(majorityWaveform.getSamples(), 3000))
-            trigger_type = 2;
+        if (ievt % 1000 == 0)
+            std::cout << event_id << std::endl;
 
-        if (config_.triggerType != trigger_type) {
-            std::cout << "skip " << event_id << " not desired trigger"
-                      << std::endl;
-            if (trigger_type == 0)
-                std::cout << "this event is top paddle triggered" << std::endl;
-            if (trigger_type == 1)
-                std::cout << "this event is alpha triggered" << std::endl;
-            if (trigger_type == 2)
-                std::cout << "this event is majority triggered" << std::endl;
-            continue;
+        // checking trigger
+        if (config_.triggerType != -1) {
+            Waveform topPaddleWaveform(trigDataStorage[0]);
+            Waveform alphaWaveform(trigDataStorage[1]);
+            Waveform majorityWaveform(trigDataStorage[2]);
+            if (Waveform::hasValueLessThan(topPaddleWaveform.getSamples(), 3000))
+                trigger_type = 0;
+            if (Waveform::hasValueLessThan(alphaWaveform.getSamples(), 3000))
+                trigger_type = 1;
+            if (Waveform::hasValueLessThan(majorityWaveform.getSamples(), 3000))
+                trigger_type = 2;
+
+
+
+            if (config_.triggerType == 3) {
+                //if (trigger_type != 2)
+                    //continue;
+                //else {
+                    double area_bp1 = 0;
+                    const double ADC_TO_MV = 2000.0 / (std::pow(2, 14) - 1);
+                    Waveform botPaddleWaveform(botPaddleDataStorage[0]);
+                    //botPaddleWaveform.subtractFlatBaseline(0,100);
+                    //botPaddleWaveform.setAmpPE(1.0);
+                    //area_bp1 = botPaddleWaveform.getPE(0, botPaddleWaveform.getSamples().size() - 1);
+                    //hist_area_bp->Fill(area_bp1);
+                    if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400)) {
+                        TCanvas c;
+                        c.Divide(2,1);
+                        TGraph* gr = botPaddleWaveform.drawMVAsGraph("");
+                        TGraph* gr2 = topPaddleWaveform.drawMVAsGraph("");
+                        //TGraph* gr = new TGraph(2000, x.data(), y.data());
+                        c.cd(1);
+                        gr->Draw();
+                        c.cd(2);
+                        gr2->Draw();
+
+                        c.SaveAs(Form("%d.pdf",ievt));
+                    } else {
+                        continue;
+                    }
+                //}
+            } else if (config_.triggerType != trigger_type) {
+                //std::cout << "skip " << event_id << " not desired trigger"
+                //    << std::endl;
+                //if (trigger_type == 0)
+                //    std::cout << "this event is top paddle triggered" << std::endl;
+                //if (trigger_type == 1)
+                //    std::cout << "this event is alpha triggered" << std::endl;
+                //if (trigger_type == 2)
+                //    std::cout << "this event is majority triggered" << std::endl;
+                continue;
+            }
         }
 
         for (size_t i = 0; i < pmts_.size(); ++i) {
@@ -151,6 +198,10 @@ void DataProcessor::processFile() {
             pe_[ch_name].push_back(pe_value);
         }
     }
+    c->SetLogy();
+    hist_area_bp->Draw();
+    c->SaveAs("hist_area_bp.pdf");
+
     inputFile->Close();
 }
 

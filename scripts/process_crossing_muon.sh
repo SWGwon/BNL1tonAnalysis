@@ -1,7 +1,4 @@
 #!/bin/bash
-source /Users/gwon/WbLS/1ton_analysis/drop_apr17_2024/setup.sh
-source /Users/gwon/WbLS/1ton_analysis/BNL1tonAnalysis/venv/bin/activate
-
 
 EXCUTABLE_DIR="/Users/gwon/WbLS/1ton_analysis/BNL1tonAnalysis/build"
 
@@ -11,19 +8,30 @@ EXCUTABLE_DIR="/Users/gwon/WbLS/1ton_analysis/BNL1tonAnalysis/build"
 
 CALIBRATION_CSV="/Users/gwon/WbLS/1ton_analysis/drop_apr17_2024/yaml/bnl1t_spe_fit_results_241111.csv"
 
+LIQUIDCONFIG=$1
+TIMESTAMP=$2
+
+if [ -z "$LIQUIDCONFIG" ] || [ -z "$TIMESTAMP" ]; then
+    echo "use: ./process_crossing_muon \$LIQUIDCONFIG(070_WbLS) \$TIMESTAMP(YYMMDD)"
+  exit 1
+fi
+
 shopt -s nullglob
 
-for i in {0..200}; do
-    PATTERN="*${2}*_${i}.root"
-    echo "/Users/gwon/WbLS/1ton_analysis/drop_apr17_2024/data/crossing_muon_${1}/${PATTERN}"
+#INPUT_DIR="/Users/gwon/WbLS/1ton_analysis/drop_apr17_2024/data/crossing_muon_${LIQUIDCONFIG}/${PATTERN}"
 
-    for INPUT_FILE in /Users/gwon/WbLS/1ton_analysis/drop_apr17_2024/data/crossing_muon_${1}/${PATTERN}; do
+for i in {0..1}; do
+    PATTERN="*${TIMESTAMP}*_${i}.root"
+    INPUT_DIR="/Users/gwon/WbLS/1ton_analysis/drop_apr17_2024/data/RAW_${LIQUIDCONFIG}/${PATTERN}"
+    echo $INPUT_DIR
+
+    for INPUT_FILE in $INPUT_DIR; do
         echo "Processing file: ${INPUT_FILE}"
         BASE_NAME=$(basename "${INPUT_FILE}" .root)
         OUTPUT_DIR="/Users/gwon/WbLS/1ton_analysis/drop_apr17_2024/analysis/${BASE_NAME}"
         mkdir -p "${OUTPUT_DIR}"
 
-        $EXCUTABLE_DIR/ProcessRawRoot -i "${INPUT_FILE}" -o "${OUTPUT_DIR}/" -n 10000 -t 1 -c "${CALIBRATION_CSV}"
+        $EXCUTABLE_DIR/ProcessRawRoot -i "${INPUT_FILE}" -o "${OUTPUT_DIR}/" -n 10000 -t 3 -c "${CALIBRATION_CSV}"
 
         if [ $? -ne 0 ]; then
             echo "Error processing file: ${INPUT_FILE}"
