@@ -561,10 +561,10 @@ void DataProcessor::dailyCheck30t() {
     std::map<std::string, TH1D*> histPMTPE;
     TH1D* histMaxWaveformIndex = new TH1D("histMaxWaveformIndex",
                                           "histMaxWaveformIndex;relative time x 2ns;counts",
-                                          70, 60, 500);
+                                          200, 0, 1000);
     TH1D* histBotMV = new TH1D("histBotMV", "histBotMV;mV ns;counts", 100, 0, 60000);
     TH1D* histSideMV = new TH1D("histSideMV", "histSideMV;mV ns;counts", 100, 0, 60000);
-    TH2D* histBotSideMV = new TH2D("histBotSideMV", "histBotSideMV;Bot mV;Side mV", 100,0,60000, 100, 0, 60000);
+    TH2D* histBotSideMV = new TH2D("histBotSideMV", (fileID + ";Bot mV;Side mV").c_str(), 100,0,60000, 100, 0, 60000);
 
     int branchIndex = 0;
     std::vector<double> outputPE(pmts30t.size(), 0.0);
@@ -605,16 +605,34 @@ void DataProcessor::dailyCheck30t() {
         double tempSideMV = 0;
         std::vector<double> summedWaveform;
 
+        bool alpha_triggered = false;
         Waveform alpha(trigDataStorage[0]);
+        bool majority_triggered = false;
+        Waveform majority(trigDataStorage[1]);
         if (Waveform::hasValueLessThan(alpha.getSamples(), 3000)) {
-            std::cout << "alpha" << std::endl;
-            alpha.subtractFlatBaseline(0, 100);
-            alpha.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
-            alpha.correctDaisyChainTrgDelay("adc_b4_ch13");
-            TCanvas* can = new TCanvas;
-            TGraph* gr = alpha.drawMVAsGraph(Form("alpha_waveform_event_%d", event_id));
-            gr->Draw();
-            can->SaveAs(Form("alpha_%d.pdf", ievt));
+            alpha_triggered = true;
+        }
+        if (Waveform::hasValueLessThan(majority.getSamples(), 3000))
+            majority_triggered = true;
+        if (alpha_triggered) {
+            if (majority_triggered) {
+                std::cout << "alpha majority together" << std::endl;
+                alpha.subtractFlatBaseline(0, 100);
+                alpha.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
+                alpha.correctDaisyChainTrgDelay("adc_b4_ch13");
+                majority.subtractFlatBaseline(0, 100);
+                majority.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
+                majority.correctDaisyChainTrgDelay("adc_b4_ch22");
+                TCanvas* can = new TCanvas;
+                can->Divide(2,1);
+                TGraph* gr2 = majority.drawMVAsGraph(Form("majority_waveform_event_%d", event_id));
+                can->cd(1);
+                gr2->Draw();
+                TGraph* gr = alpha.drawMVAsGraph(Form("alpha_waveform_event_%d", event_id));
+                can->cd(2);
+                gr->Draw();
+                can->SaveAs(Form("adc_b4_ch13_%d.pdf", ievt));
+            }
             continue;
         }
 
@@ -623,6 +641,12 @@ void DataProcessor::dailyCheck30t() {
         for (size_t i = 0; i < pmts30t.size(); ++i) {
             std::string ch_name = pmts30t[i];
             Waveform wf(dataStorage[i]);
+            if (wf.getSamples().size() < 100) {
+                std::cout << wf.getSamples().size() << std::endl;
+                std::cout << ievt << std::endl;
+                std::cout << ch_name << std::endl;
+                break;
+            }
             wf.subtractFlatBaseline(0, 100);
             wf.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
             wf.correctDaisyChainTrgDelay(ch_name);
