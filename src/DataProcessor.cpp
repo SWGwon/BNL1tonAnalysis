@@ -20,7 +20,7 @@ DataProcessor::DataProcessor(const AppConfig &config) : config_(config) {
                "adc_b2_ch8",  "adc_b2_ch9",  "adc_b2_ch10", "adc_b2_ch11",
                "adc_b2_ch12", "adc_b2_ch13", "adc_b2_ch14", "adc_b2_ch15",
                "adc_b3_ch0",  "adc_b3_ch1",  "adc_b3_ch2",  "adc_b3_ch3"};
-    triggers_30t_ = {"adc_b4_ch13", "adc_b4_ch22"};
+    triggers_30t_ = {"adc_b4_ch13", "adc_b4_ch22", "adc_b4_ch23"};
 
     for (const auto &pmt : pmts_) {
         pe_[pmt] = std::vector<double>();
@@ -609,11 +609,16 @@ void DataProcessor::dailyCheck30t() {
         Waveform alpha(trigDataStorage[0]);
         bool majority_triggered = false;
         Waveform majority(trigDataStorage[1]);
+        bool adc_b4_ch23_fired = false;
+        Waveform adc_b4_ch23(trigDataStorage[2]);
         if (Waveform::hasValueLessThan(alpha.getSamples(), 3000)) {
             alpha_triggered = true;
         }
         if (Waveform::hasValueLessThan(majority.getSamples(), 3000))
             majority_triggered = true;
+        if (Waveform::hasValueLessThan(adc_b4_ch23.getSamples(), 3000))
+            adc_b4_ch23_fired = true;
+
         if (alpha_triggered) {
             if (majority_triggered) {
                 std::cout << "alpha majority together" << std::endl;
@@ -635,6 +640,9 @@ void DataProcessor::dailyCheck30t() {
             }
             continue;
         }
+
+        if (adc_b4_ch23_fired) continue;
+        if (!majority_triggered) continue;
 
         int branchIndex = 0;
         // Process waveform for each PMT channel
