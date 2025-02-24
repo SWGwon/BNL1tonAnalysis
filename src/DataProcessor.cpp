@@ -742,7 +742,7 @@ void DataProcessor::dailyCheck30t() {
 
         if (!ifBotPaddleFired) {
             //std::cout << "event " << event_id << " is not bottom paddle fired, skipping this event" << std::endl;
-            continue;
+            //continue;
         }
         //botpaddleCanvas->SaveAs(Form("bot_paddle_waveforms_%d.pdf",event_id));
 
@@ -826,11 +826,13 @@ void DataProcessor::dailyCheck30t() {
         sideMV = tempSideMV;
         histBotSideMV->Fill(tempBotMV,tempSideMV);
 
-        histBotPE->Fill(tempBotPE);
+        if (ifBotPaddleFired) {
+            histBotPE->Fill(tempBotPE);
+            histSidePE->Fill(tempSidePE);
+            histBotSidePE->Fill(tempBotPE,tempSidePE);
+        }
         bottomPE = tempBotPE;
-        histSidePE->Fill(tempSidePE);
         sidePE = tempSidePE;
-        histBotSidePE->Fill(tempBotPE,tempSidePE);
 
         outputTree->Fill();
     } // end event loop
