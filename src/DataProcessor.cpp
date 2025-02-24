@@ -604,6 +604,24 @@ void DataProcessor::dailyCheck30t() {
         inputTree->SetBranchAddress(trig.c_str(), tempArray);
     }
 
+    //bottom paddle top layer
+    std::vector<std::string> bot_paddle_top = {"adc_b4_ch18",  "adc_b4_ch19",  "adc_b4_ch20",  "adc_b4_ch21"};
+    std::vector<UShort_t*> dataStorage_bot_paddle_top;
+    for (auto &pmt : bot_paddle_top) {
+        UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+        dataStorage_bot_paddle_top.push_back(tempArray);
+        inputTree->SetBranchAddress(pmt.c_str(), tempArray);
+    }
+
+    //bottom paddle bot layer
+    std::vector<std::string> bot_paddle_bot = {"adc_b4_ch9",  "adc_b4_ch10",  "adc_b4_ch11",  "adc_b4_ch12"};
+    std::vector<UShort_t*> dataStorage_bot_paddle_bot;
+    for (auto &pmt : bot_paddle_bot) {
+        UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+        dataStorage_bot_paddle_bot.push_back(tempArray);
+        inputTree->SetBranchAddress(pmt.c_str(), tempArray);
+    }
+
     int event_number = 0;
     if (config_.eventNumber > inputTree->GetEntries())
         event_number = inputTree->GetEntries();
@@ -666,7 +684,7 @@ void DataProcessor::dailyCheck30t() {
             std::string ch_name = pmts30t[i];
             Waveform wf(dataStorage[i]);
             if (wf.getSamples().size() != 2000) {
-                std::cout << "event " << event_id << " is not good" << std::endl;
+                std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
                 std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
                 break;
@@ -690,6 +708,43 @@ void DataProcessor::dailyCheck30t() {
         }
         if (!isEventOk) 
             continue;
+        
+        //bottom paddle selection
+        int bottom_paddle_index = 0;
+        bool ifBotPaddleFired = false;
+        bool ifBotTopPaddleFired = false;
+        std::unique_ptr<TCanvas> botpaddleCanvas = std::make_unique<TCanvas>();
+        botpaddleCanvas->Divide(4,2);
+        for (int i = 0; i < 4; ++i) {
+            Waveform wf(dataStorage_bot_paddle_top[i]);
+            if (Waveform::hasValueLessThan(wf.getSamples(), 3000)) {
+                ifBotTopPaddleFired = true;
+            }
+            TGraph* tempGr = wf.drawMVAsGraph("");
+            botpaddleCanvas->cd(bottom_paddle_index+1);
+            tempGr->Draw();
+            bottom_paddle_index++;
+        }
+        bool ifBotBotPaddleFired = false;
+        for (int i = 0; i < 4; ++i) {
+            Waveform wf(dataStorage_bot_paddle_bot[i]);
+            if (Waveform::hasValueLessThan(wf.getSamples(), 3000)) {
+                ifBotBotPaddleFired = true;
+            }
+            TGraph* tempGr = wf.drawMVAsGraph("");
+            botpaddleCanvas->cd(bottom_paddle_index+1);
+            tempGr->Draw();
+            bottom_paddle_index++;
+        }
+        if (ifBotTopPaddleFired || ifBotBotPaddleFired) {
+            ifBotPaddleFired = true;
+        }
+
+        if (!ifBotPaddleFired) {
+            //std::cout << "event " << event_id << " is not bottom paddle fired, skipping this event" << std::endl;
+            continue;
+        }
+        //botpaddleCanvas->SaveAs(Form("bot_paddle_waveforms_%d.pdf",event_id));
 
         // Determine the index of the maximum value in the summed waveform
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
@@ -749,7 +804,7 @@ void DataProcessor::dailyCheck30t() {
         //    std::cout << "side mv : " << tempSideMV << std::endl;
         //    std::cout << "maxIndex : " << maxIndex << std::endl;
 
-        //    TCanvas* can = new TCanvas;
+        //    std::unique_ptr<TCanvas> can = std::make_unique<TCanvas>();
         //    can->Divide(6,6);
         //    for (int i = 0; i < 36; ++i) {
         //        std::string ch_name = pmts30t[i];
