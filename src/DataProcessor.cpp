@@ -326,7 +326,7 @@ void DataProcessor::dailyCheck() {
         dataStorage.push_back(tempArray);
         inputTree->SetBranchAddress(pmt.c_str(), tempArray);
         histPMTPE[pmt] =
-            new TH1D(pmt.c_str(), (pmt + ";mV ns;counts").c_str(), 50, 0, 0);
+            new TH1D(pmt.c_str(), (pmt + ";PE;counts").c_str(), 50, 0, 0);
     }
 
     // Utility lambda to update hodoscope fire counts
@@ -376,6 +376,12 @@ void DataProcessor::dailyCheck() {
         for (size_t i = 0; i < pmts_.size(); ++i) {
             const std::string &ch_name = pmts_[i];
             Waveform wf(dataStorage[i]);
+            if (wf.getSamples().size() < 100) {
+                std::cout << wf.getSamples().size() << std::endl;
+                std::cout << ievt << std::endl;
+                std::cout << ch_name << std::endl;
+                break;
+            }
             wf.subtractFlatBaseline(0, 100);
             double spe = (spe_mean_.count(ch_name) > 0) ? spe_mean_[ch_name]
                                                         : 0.267534455;
@@ -393,7 +399,7 @@ void DataProcessor::dailyCheck() {
             }
 
             // Calculate PE value for the channel and fill its histogram
-            double pe_value = wf.getPE(0, wf.getAmpPE().size() - 1) / 2.0;
+            double pe_value = wf.getPE(0, wf.getAmpPE().size() - 1);
             pe_[ch_name].push_back(pe_value);
             schn[i] = pe_value;
             histPMTPE[ch_name]->Fill(pe_value);
@@ -561,10 +567,14 @@ void DataProcessor::dailyCheck30t() {
     std::map<std::string, TH1D*> histPMTPE;
     TH1D* histMaxWaveformIndex = new TH1D("histMaxWaveformIndex",
                                           "histMaxWaveformIndex;relative time x 2ns;counts",
-                                          200, 0, 1000);
-    TH1D* histBotMV = new TH1D("histBotMV", "histBotMV;mV ns;counts", 100, 0, 60000);
-    TH1D* histSideMV = new TH1D("histSideMV", "histSideMV;mV ns;counts", 100, 0, 60000);
-    TH2D* histBotSideMV = new TH2D("histBotSideMV", (fileID + ";Bot mV;Side mV").c_str(), 100,0,60000, 100, 0, 60000);
+                                          300, 200, 500);
+    TH1D* histBotMV = new TH1D("histBotMV", "histBotMV;mV * 2ns;counts", 100, 0, 60000);
+    TH1D* histSideMV = new TH1D("histSideMV", "histSideMV;mV * 2ns;counts", 100, 0, 60000);
+    TH2D* histBotSideMV = new TH2D("histBotSideMV", (fileID + ";Bot mV * 2ns;Side mv * 2ns").c_str(), 100,0,60000, 100, 0, 60000);
+
+    TH1D* histBotPE = new TH1D("histBotPE", "histBotPE;PE;counts", 100, 0, 2400);
+    TH1D* histSidePE = new TH1D("histSidePE", "histSidePE;PE;counts", 100, 0, 2400);
+    TH2D* histBotSidePE = new TH2D("histBotSidePE", (fileID + ";Bot PE;Side PE").c_str(), 100,0,2400, 100, 0,2400);
 
     int branchIndex = 0;
     std::vector<double> outputPE(pmts30t.size(), 0.0);
@@ -579,6 +589,10 @@ void DataProcessor::dailyCheck30t() {
         branchIndex++;
     }
 
+    double bottomMV = 0;
+    outputTree->Branch("bottomMV", &bottomMV);
+    double sideMV = 0;
+    outputTree->Branch("sideMV", &sideMV);
     double bottomPE = 0;
     outputTree->Branch("bottomPE", &bottomPE);
     double sidePE = 0;
@@ -600,9 +614,10 @@ void DataProcessor::dailyCheck30t() {
         if (ievt % 1000 == 0)
             std::cout << event_id << std::endl;
 
-        int tempIndex = 0;
         double tempBotMV = 0;
         double tempSideMV = 0;
+        double tempBotPE = 0;
+        double tempSidePE = 0;
         std::vector<double> summedWaveform;
 
         bool alpha_triggered = false;
@@ -621,22 +636,22 @@ void DataProcessor::dailyCheck30t() {
 
         if (alpha_triggered) {
             if (majority_triggered) {
-                std::cout << "alpha majority together" << std::endl;
-                alpha.subtractFlatBaseline(0, 100);
-                alpha.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
-                alpha.correctDaisyChainTrgDelay("adc_b4_ch13");
-                majority.subtractFlatBaseline(0, 100);
-                majority.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
-                majority.correctDaisyChainTrgDelay("adc_b4_ch22");
-                TCanvas* can = new TCanvas;
-                can->Divide(2,1);
-                TGraph* gr2 = majority.drawMVAsGraph(Form("majority_waveform_event_%d", event_id));
-                can->cd(1);
-                gr2->Draw();
-                TGraph* gr = alpha.drawMVAsGraph(Form("alpha_waveform_event_%d", event_id));
-                can->cd(2);
-                gr->Draw();
-                can->SaveAs(Form("adc_b4_ch13_%d.pdf", ievt));
+                std::cout << "event " << event_id << ": alpha majority together" << std::endl;
+                //alpha.subtractFlatBaseline(0, 100);
+                //alpha.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
+                //alpha.correctDaisyChainTrgDelay("adc_b4_ch13");
+                //majority.subtractFlatBaseline(0, 100);
+                //majority.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
+                //majority.correctDaisyChainTrgDelay("adc_b4_ch22");
+                //TCanvas* can = new TCanvas;
+                //can->Divide(2,1);
+                //TGraph* gr2 = majority.drawMVAsGraph(Form("majority_waveform_event_%d", event_id));
+                //can->cd(1);
+                //gr2->Draw();
+                //TGraph* gr = alpha.drawMVAsGraph(Form("alpha_waveform_event_%d", event_id));
+                //can->cd(2);
+                //gr->Draw();
+                //can->SaveAs(Form("adc_b4_ch13_%d.pdf", ievt));
             }
             continue;
         }
@@ -644,69 +659,125 @@ void DataProcessor::dailyCheck30t() {
         if (adc_b4_ch23_fired) continue;
         if (!majority_triggered) continue;
 
+        int tempIndex = 0;
         int branchIndex = 0;
-        // Process waveform for each PMT channel
+        bool isEventOk = true;
         for (size_t i = 0; i < pmts30t.size(); ++i) {
             std::string ch_name = pmts30t[i];
             Waveform wf(dataStorage[i]);
-            if (wf.getSamples().size() < 100) {
-                std::cout << wf.getSamples().size() << std::endl;
-                std::cout << ievt << std::endl;
-                std::cout << ch_name << std::endl;
+            if (wf.getSamples().size() != 2000) {
+                std::cout << "event " << event_id << " is not good" << std::endl;
+                std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
+                isEventOk = false;
                 break;
             }
             wf.subtractFlatBaseline(0, 100);
-            wf.setAmpPE(1.0, 1.0); //spe_mean, factor = 1.0,1.0
+            wf.setAmpPE(1.0); //spe_mean, factor = 1.0,1.0
             wf.correctDaisyChainTrgDelay(ch_name);
 
             // Sum waveforms: use the first channel as the base and add subsequent channels
-            if (i == 0) {
-                summedWaveform = wf.getAmpMV();
-            } else {
-                std::vector<double> tempWf = wf.getAmpMV();
-                std::transform(summedWaveform.begin(), summedWaveform.end(),
-                               tempWf.begin(),
-                               summedWaveform.begin(), // store result back in summedWaveform
-                               std::plus<double>());
+            if (ch_name != "adc_b1_ch9") {
+                if (i == 0) {
+                    summedWaveform = wf.getAmpPE();
+                } else {
+                    std::vector<double> tempWf = wf.getAmpPE();
+                    std::transform(summedWaveform.begin(), summedWaveform.end(),
+                            tempWf.begin(),
+                            summedWaveform.begin(), // store result back in summedWaveform
+                            std::plus<double>());
+                }
             }
-
-            // Set integration range (here using entire sample length)
-            int start = 0;
-            int end = MAX_SAMPLE_SIZE;
-            double mV_value = 0;
-            std::vector<double> ampMV = wf.getAmpMV();
-            for (int i = start; i <= ampMV.size() - 1; ++i) {
-                mV_value += ampMV[i];
-            }
-            double pe_value = wf.getPE(start, wf.getAmpPE().size() - 1);
-            pe_[ch_name].push_back(pe_value / 2.0);
-            histPMTPE[ch_name]->Fill(pe_value / 2.0);
-            
-            outputPE[branchIndex] = pe_value / 2.0;
-
-            // Accumulate integrated values for bottom and side channels
-            if (tempIndex < 12) {
-                tempBotMV += mV_value;
-            } else {
-                tempSideMV += mV_value;
-            }
-            tempIndex++;
-            branchIndex++;
-        } // end PMT channel loop
-
-        // Fill histograms for bottom and side integrated values
-        histBotMV->Fill(tempBotMV);
-        bottomPE = tempBotMV;
-        histSideMV->Fill(tempSideMV);
-        sidePE = tempSideMV;
-        histBotSideMV->Fill(tempBotMV,tempSideMV);
-
-        outputTree->Fill();
+        }
+        if (!isEventOk) 
+            continue;
 
         // Determine the index of the maximum value in the summed waveform
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
         int maxIndex = std::distance(summedWaveform.begin(), maxIt);
         histMaxWaveformIndex->Fill(maxIndex);
+
+        // Process waveform for each PMT channel
+        for (size_t i = 0; i < pmts30t.size(); ++i) {
+            std::string ch_name = pmts30t[i];
+            Waveform wf(dataStorage[i]);
+            wf.subtractFlatBaseline(0, 100);
+            wf.setAmpPE(1.0); //spe_mean, factor = 1.0,1.0
+            wf.correctDaisyChainTrgDelay(ch_name);
+
+            // Set integration range (here using entire sample length)
+            int start = maxIndex - 20;
+            int end = maxIndex + 40;
+            double pe_value = 0;
+            double mV_value = 0;
+            if (ch_name == "adc_b1_ch9") {
+                pe_value = wf.getPE(start, wf.getAmpPE().size() - 1);
+            } else {
+                pe_value = wf.getPE(start, end);
+            }
+            pe_[ch_name].push_back(pe_value);
+            histPMTPE[ch_name]->Fill(pe_value);
+            
+            outputPE[branchIndex] = pe_value;
+
+            std::vector<double> ampMV = wf.getAmpMV();
+            if (ch_name == "adc_b1_ch9") {
+                for (int i = start; i <= ampMV.size() - 1; ++i) {
+                    mV_value += ampMV[i];
+                }
+            } else {
+                for (int i = start; i <= end; ++i) {
+                    mV_value += ampMV[i];
+                }
+            }
+
+            // Accumulate integrated values for bottom and side channels
+            if (ch_name != "adc_b1_ch9") {
+                if (branchIndex < 12) {
+                    tempBotPE += pe_value;
+                    tempBotMV += mV_value;
+                } else {
+                    tempSidePE += pe_value;
+                    tempSideMV += mV_value;
+                }
+            }
+            tempIndex++;
+            branchIndex++;
+        } // end PMT channel loop
+
+        //if (tempBotMV < 500) {
+        //    std::cout << "event " << event_id << " bot mv < 500" << std::endl;
+        //    std::cout << "side mv : " << tempSideMV << std::endl;
+        //    std::cout << "maxIndex : " << maxIndex << std::endl;
+
+        //    TCanvas* can = new TCanvas;
+        //    can->Divide(6,6);
+        //    for (int i = 0; i < 36; ++i) {
+        //        std::string ch_name = pmts30t[i];
+        //        Waveform wf(dataStorage[i]);
+        //        wf.subtractFlatBaseline(0, 100);
+        //        wf.setAmpPE(1.0); //spe_mean, factor = 1.0,1.0
+        //        //wf.correctDaisyChainTrgDelay(ch_name);
+        //        can->cd(i+1);
+        //        TGraph* tempGr = wf.drawPEAsGraph(ch_name);
+        //        tempGr->Draw();
+        //    }
+        //    can->SaveAs(Form("waveforms_%d.pdf",event_id));
+        //}
+
+        // Fill histograms for bottom and side integrated values
+        histBotMV->Fill(tempBotMV);
+        bottomMV = tempBotMV;
+        histSideMV->Fill(tempSideMV);
+        sideMV = tempSideMV;
+        histBotSideMV->Fill(tempBotMV,tempSideMV);
+
+        histBotPE->Fill(tempBotPE);
+        bottomPE = tempBotPE;
+        histSidePE->Fill(tempSidePE);
+        sidePE = tempSidePE;
+        histBotSidePE->Fill(tempBotPE,tempSidePE);
+
+        outputTree->Fill();
     } // end event loop
 
     // Generate output filename using output file path and extracted fileID
@@ -759,11 +830,31 @@ void DataProcessor::dailyCheck30t() {
     histBotSideMV->Draw();
     c6->SaveAs((filename + "_2dMV.pdf").c_str());
 
+    TCanvas* c7 = new TCanvas();
+    c7->SetLogy();
+    histBotPE->Draw();
+    std::cout << "saving " << filename + "_BotPE.pdf" << std::endl;
+    c7->SaveAs((filename + "_BotPE.pdf").c_str());
+
+    TCanvas* c8 = new TCanvas();
+    c8->SetLogy();
+    histSidePE->Draw();
+    std::cout << "saving " << filename + "_SidePE.pdf" << std::endl;
+    c8->SaveAs((filename + "_SidePE.pdf").c_str());
+
+    TCanvas* c9 = new TCanvas();
+    c9->SetLogz();
+    histBotSidePE->Draw();
+    c9->SaveAs((filename + "_2dPE.pdf").c_str());
+
     inputFile->Close();
 
     histBotMV->Write();
     histSideMV->Write();
     histBotSideMV->Write();
+    histBotPE->Write();
+    histSidePE->Write();
+    histBotSidePE->Write();
     outputTree->Write();
     outputFile->Close();
 }

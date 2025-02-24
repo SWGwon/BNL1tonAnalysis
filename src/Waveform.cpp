@@ -70,6 +70,7 @@ std::vector<double> Waveform::getAmpMV(const std::string & /*ch_name*/) const {
 
 // Converts mV data to PE units.
 // Conversion formula: amp_pe = amp_mV / factor / spe_mean
+// factor: 50 ohm
 void Waveform::setAmpPE(double spe_mean, double factor) {
     std::vector<double> ampMV = getAmpMV();
     amp_pe_.clear();
@@ -107,10 +108,18 @@ void Waveform::correctDaisyChainTrgDelay(const std::string &ch_name, int dt_ns,
         return;
     }
     std::vector<double> corrected;
+    std::vector<double> corrected_samples;
     if (ch_name.find("_b1") != std::string::npos) {
         if (amp_pe_.size() > static_cast<size_t>(dS * 3))
             corrected =
                 std::vector<double>(amp_pe_.begin() + dS * 3, amp_pe_.end());
+        else {
+            std::cerr << "Not enough samples for _b1 correction" << std::endl;
+            return;
+        }
+        if (samples_.size() > static_cast<size_t>(dS * 3))
+            corrected_samples =
+                std::vector<double>(samples_.begin() + dS * 3, samples_.end());
         else {
             std::cerr << "Not enough samples for _b1 correction" << std::endl;
             return;
@@ -123,10 +132,24 @@ void Waveform::correctDaisyChainTrgDelay(const std::string &ch_name, int dt_ns,
             std::cerr << "Not enough samples for _b2 correction" << std::endl;
             return;
         }
+        if (samples_.size() > static_cast<size_t>(dS * 3))
+            corrected_samples = std::vector<double>(samples_.begin() + dS * 2,
+                                            samples_.end() - dS);
+        else {
+            std::cerr << "Not enough samples for _b2 correction" << std::endl;
+            return;
+        }
     } else if (ch_name.find("_b3") != std::string::npos) {
         if (amp_pe_.size() > static_cast<size_t>(dS * 3))
             corrected = std::vector<double>(amp_pe_.begin() + dS,
                                             amp_pe_.end() - dS * 2);
+        else {
+            std::cerr << "Not enough samples for _b3 correction" << std::endl;
+            return;
+        }
+        if (samples_.size() > static_cast<size_t>(dS * 3))
+            corrected_samples = std::vector<double>(samples_.begin() + dS,
+                                            samples_.end() - dS * 2);
         else {
             std::cerr << "Not enough samples for _b3 correction" << std::endl;
             return;
@@ -141,6 +164,14 @@ void Waveform::correctDaisyChainTrgDelay(const std::string &ch_name, int dt_ns,
                       << std::endl;
             return;
         }
+        if (samples_.size() > static_cast<size_t>(dS * 3))
+            corrected_samples =
+                std::vector<double>(samples_.begin(), samples_.end() - dS * 3);
+        else {
+            std::cerr << "Not enough samples for _b4/_b5 correction"
+                      << std::endl;
+            return;
+        }
     } else {
         std::cerr << "ERROR in correctDaisyChainTrgDelay: invalid boardId in "
                      "channel name "
@@ -148,6 +179,7 @@ void Waveform::correctDaisyChainTrgDelay(const std::string &ch_name, int dt_ns,
         return;
     }
     amp_pe_ = corrected;
+    samples_ = corrected_samples;
 }
 
 // Converts amp_pe_ data into a TGraph and returns it.
