@@ -736,7 +736,7 @@ void DataProcessor::dailyCheck30t() {
             tempGr->Draw();
             bottom_paddle_index++;
         }
-        if (ifBotTopPaddleFired || ifBotBotPaddleFired) {
+        if (ifBotTopPaddleFired && ifBotBotPaddleFired) {
             ifBotPaddleFired = true;
         }
 
