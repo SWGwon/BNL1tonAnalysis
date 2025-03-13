@@ -76,6 +76,39 @@ std::string DataProcessor::extractFileID(const std::string &filePath) {
     return fileName;
 }
 
+// median 계산 함수
+double getMedian(std::vector<unsigned short> &arr) {
+        size_t size = arr.size();
+    if (size == 0) {
+        throw std::domain_error("Array is empty");
+    }
+    std::sort(arr.begin(), arr.end());
+    //std::sort(arr.begin(), arr.begin()+100); 
+    return (size % 2 == 0) ? (arr[size / 2 - 1] + arr[size / 2]) / 2.0
+                           : arr[size / 2];
+    //std::vector<double> samples_ = {};
+    //for (int i = 0; i < arr.size(); ++i) {
+    //    if (arr[i] != 0)
+    //        samples_.push_back((double)arr[i]);
+    //    else
+    //        break;
+    //}
+    //int start = 0;
+    //int end = 100;
+    //if (start < 0 || end >= static_cast<int>(arr.size()) || start > end) {
+    //    throw std::invalid_argument("Invalid range for baseline computation");
+    //}
+    //std::vector<int> subVector(arr.begin() + start,
+    //                           arr.begin() + end + 1);
+    //std::sort(subVector.begin(), subVector.end());
+    //int n = subVector.size();
+    //if (n % 2 == 0) {
+    //    return (subVector[n / 2 - 1] + subVector[n / 2]) / 2;
+    //} else {
+    //    return subVector[n / 2];
+    //}
+}
+
 void DataProcessor::processFile() {
     const int MAX_SAMPLE_SIZE = 3000;
     TFile *inputFile = new TFile(config_.inputFileName.c_str());
@@ -86,6 +119,7 @@ void DataProcessor::processFile() {
     std::vector<UShort_t *> dataStorage;
     std::vector<UShort_t *> trigDataStorage;
     std::vector<UShort_t *> botPaddleDataStorage;
+    std::vector<UShort_t *> topPaddleDataStorage;
 
     for (auto &pmt : pmts_) {
         UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
@@ -99,108 +133,150 @@ void DataProcessor::processFile() {
         inputTree->SetBranchAddress(trig.c_str(), tempArray);
     }
 
+    std::vector<std::string> topPaddlePMTs = {"adc_b4_ch13", "adc_b4_ch14"};
+    for (auto &tp : topPaddlePMTs) {
+        UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+        topPaddleDataStorage.push_back(tempArray);
+        inputTree->SetBranchAddress(tp.c_str(), tempArray);
+    }
+
     UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
     botPaddleDataStorage.push_back(tempArray);
     inputTree->SetBranchAddress("adc_b1_ch0", tempArray);
 
+    int start = 0, end = 0;
+    if (config_.triggerType == 0 || config_.triggerType == 3) {
+        start = 380;
+        end = 450;
+    } else if (config_.triggerType == 1) {
+        start = 320;
+        end = 390;
+    } else if (config_.triggerType == 2) {
+        start = 160;
+        end = 230;
+    }
 
-    //unsigned short adc_b1_ch0[2000] = {};
-    //inputTree->SetBranchAddress("adc_b1_ch0", adc_b1_ch0);
+    int event_number = (config_.eventNumber > inputTree->GetEntries() ?
+            inputTree->GetEntries() : config_.eventNumber);
 
-    TCanvas* c = new TCanvas();
-    TH1D* hist_area_bp = new TH1D("hist_area_bp", "hist_area_bp", 100,0,100);
-
-
-    int trigger_type = -1;
-    int event_number = 0;
-    if (config_.eventNumber > inputTree->GetEntries())
-        event_number = inputTree->GetEntries();
-    else
-        event_number = config_.eventNumber;
     for (int ievt = 0; ievt < event_number; ++ievt) {
         inputTree->GetEntry(ievt);
         if (ievt % 1000 == 0)
             std::cout << event_id << std::endl;
 
-        // checking trigger
-        if (config_.triggerType != -1) {
-            Waveform topPaddleWaveform(trigDataStorage[0]);
-            Waveform alphaWaveform(trigDataStorage[1]);
-            Waveform majorityWaveform(trigDataStorage[2]);
-            if (Waveform::hasValueLessThan(topPaddleWaveform.getSamples(), 3000))
-                trigger_type = 0;
-            if (Waveform::hasValueLessThan(alphaWaveform.getSamples(), 3000))
-                trigger_type = 1;
-            if (Waveform::hasValueLessThan(majorityWaveform.getSamples(), 3000))
-                trigger_type = 2;
-
-
-
-            if (config_.triggerType == 3) {
-                //if (trigger_type != 2)
-                    //continue;
-                //else {
-                    double area_bp1 = 0;
-                    const double ADC_TO_MV = 2000.0 / (std::pow(2, 14) - 1);
-                    Waveform botPaddleWaveform(botPaddleDataStorage[0]);
-                    //botPaddleWaveform.subtractFlatBaseline(0,100);
-                    //botPaddleWaveform.setAmpPE(1.0);
-                    //area_bp1 = botPaddleWaveform.getPE(0, botPaddleWaveform.getSamples().size() - 1);
-                    //hist_area_bp->Fill(area_bp1);
-                    if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400)) {
-                        TCanvas c;
-                        c.Divide(2,1);
-                        TGraph* gr = botPaddleWaveform.drawMVAsGraph("");
-                        TGraph* gr2 = topPaddleWaveform.drawMVAsGraph("");
-                        //TGraph* gr = new TGraph(2000, x.data(), y.data());
-                        c.cd(1);
-                        gr->Draw();
-                        c.cd(2);
-                        gr2->Draw();
-
-                        c.SaveAs(Form("%d.pdf",ievt));
-                    } else {
-                        continue;
-                    }
-                //}
-            } else if (config_.triggerType != trigger_type) {
-                //std::cout << "skip " << event_id << " not desired trigger"
-                //    << std::endl;
-                //if (trigger_type == 0)
-                //    std::cout << "this event is top paddle triggered" << std::endl;
-                //if (trigger_type == 1)
-                //    std::cout << "this event is alpha triggered" << std::endl;
-                //if (trigger_type == 2)
-                //    std::cout << "this event is majority triggered" << std::endl;
-                continue;
-            }
-        }
+        bool isEventOk = true;
+        std::vector<std::vector<double>> processedWaveforms;
+        processedWaveforms.reserve(pmts_.size());
+        std::vector<double> peValues;
+        peValues.reserve(pmts_.size());
 
         for (size_t i = 0; i < pmts_.size(); ++i) {
             std::string ch_name = pmts_[i];
             Waveform wf(dataStorage[i]);
+
+            if (wf.getSamples().size() != 2000) {
+                std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
+                std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
+                isEventOk = false;
+                break;
+            }
             wf.subtractFlatBaseline(0, 100);
             wf.setAmpPE(spe_mean_[ch_name]);
             wf.correctDaisyChainTrgDelay(ch_name);
-
-            int start = 0, end = 0;
-            if (config_.triggerType == 0) {
-                start = 380;
-                end = 450;
-            } else if (config_.triggerType == 1) {
-                start = 320;
-                end = 390;
-            } else if (config_.triggerType == 2) {
-                start = 160;
-                end = 230;
-            }
             double pe_value = wf.getPE(start, end);
-            pe_[ch_name].push_back(pe_value);
+            peValues.push_back(pe_value);
+            processedWaveforms.push_back(wf.getSamples());
+        }
+        if (!isEventOk)
+            continue;
+
+        std::vector<double> summedWaveform = processedWaveforms[0];
+        for (size_t i = 1; i < processedWaveforms.size(); ++i) {
+            std::transform(summedWaveform.begin(), summedWaveform.end(),
+                    processedWaveforms[i].begin(),
+                    summedWaveform.begin(), std::plus<double>());
+        }
+        auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
+        int maxIndex = std::distance(summedWaveform.begin(), maxIt);
+
+        // checking trigger, based on peak time
+        if (config_.triggerType != -1) {
+            //tp only
+            if (config_.triggerType == 0) {
+                if (maxIndex < 380 || maxIndex > 450) {
+                    std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
+                    continue;
+                }
+
+                //Waveform topPaddleWaveform(trigDataStorage[0]);
+                //if (!Waveform::hasValueLessThan(topPaddleWaveform.getSamples(), 3000))
+                //    continue;
+            }
+            //alpha only
+            if (config_.triggerType == 1) {
+                if (maxIndex < 320 || maxIndex > 390) {
+                    std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
+                    continue;
+                }
+                //Waveform alphaWaveform(trigDataStorage[1]);
+                //if (!Waveform::hasValueLessThan(alphaWaveform.getSamples(), 3000))
+                //    continue;
+            }
+            //majority only
+            if (config_.triggerType == 2) {
+                if (maxIndex < 160 || maxIndex > 230) {
+                    std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
+                    continue;
+                }
+                //Waveform majorityWaveform(trigDataStorage[2]);
+                //if (!Waveform::hasValueLessThan(majorityWaveform.getSamples(), 3000))
+                //    continue;
+            }
+
+            //crossing muon: top paddle + bottom paddle
+            //using raw pmt waveform
+            if (config_.triggerType == 3) {
+                if (maxIndex < 380 || maxIndex > 450) continue;
+                Waveform botPaddleWaveform(botPaddleDataStorage[0]);
+                Waveform tp1(topPaddleDataStorage[0]);
+                Waveform tp2(topPaddleDataStorage[1]);
+                //if (!Waveform::hasValueLessThan(topPaddleWaveform.getSamples(), 3000))
+                if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400) &&
+                        Waveform::hasValueLessThan(tp1.getSamples(), 15400) &&
+                        Waveform::hasValueLessThan(tp2.getSamples(), 15400)) {
+                    TCanvas c;
+                    c.Divide(3,3);
+                    TGraph* gr = botPaddleWaveform.drawMVAsGraph("bot paddle");
+                    TGraph* gr2 = tp1.drawMVAsGraph("raw tp1");
+                    TGraph* gr3 = tp2.drawMVAsGraph("raw tp2");
+                    c.cd(1);
+                    gr->Draw();
+                    c.cd(2);
+                    gr2->Draw();
+                    c.cd(3);
+                    gr3->Draw();
+                    for (int iii = 4; iii < 10; ++iii) {
+                        std::string ch_name = pmts_[iii];
+                        Waveform wf(dataStorage[iii]);
+                        wf.subtractFlatBaseline(0, 100);
+                        wf.setAmpPE(spe_mean_[ch_name]);
+                        wf.correctDaisyChainTrgDelay(ch_name);
+                        TGraph* tempgr = wf.drawMVAsGraph(ch_name.c_str());
+                        c.cd(iii);
+                        tempgr->Draw();
+                    }
+
+                    c.SaveAs(Form("%d.pdf",event_id));
+                } else {
+                    continue;
+                }
+            }
+            for (size_t i = 0; i < pmts_.size(); ++i) {
+                std::string ch_name = pmts_[i];
+                pe_[ch_name].push_back(peValues[i]);
+            }
         }
     }
-    c->SetLogy();
-    hist_area_bp->Draw();
-    c->SaveAs("hist_area_bp.pdf");
 
     inputFile->Close();
 }

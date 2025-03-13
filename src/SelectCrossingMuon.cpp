@@ -69,6 +69,11 @@ double getMedian(std::vector<unsigned short> &arr) {
                            : arr[size / 2];
 }
 
+bool hasValueLessThan(const std::vector<double> &vec, int threshold) {
+    return std::any_of(vec.begin(), vec.end(),
+                       [threshold](double value) { return value < threshold; });
+}
+
 // 함수: 데이터 로드
 std::vector<int> GetCrossingMuonEventIds(const std::string &fpath, int config) {
     hist_bp1_area = new TH1D("hist_bp1_area", "hist_bp1_area", 100, 0, 100);
@@ -94,6 +99,18 @@ std::vector<int> GetCrossingMuonEventIds(const std::string &fpath, int config) {
     tree->SetBranchAddress("event_id", &event_id);
     unsigned short adc_b1_ch0[2000] = {};
     tree->SetBranchAddress("adc_b1_ch0", adc_b1_ch0);
+
+    unsigned short adc_b4_ch13[2000] = {};
+    tree->SetBranchAddress("adc_b4_ch13", adc_b4_ch13);
+    unsigned short adc_b4_ch14[2000] = {};
+    tree->SetBranchAddress("adc_b4_ch14", adc_b4_ch14);
+
+    unsigned short adc_b5_ch33[2000] = {};
+    tree->SetBranchAddress("adc_b5_ch33", adc_b5_ch33);
+    unsigned short adc_b5_ch34[2000] = {};
+    tree->SetBranchAddress("adc_b5_ch34", adc_b5_ch34);
+    unsigned short adc_b5_ch35[2000] = {};
+    tree->SetBranchAddress("adc_b5_ch35", adc_b5_ch35);
     // unsigned short adc_b5_ch33[2000] = {};
     // tree->SetBranchAddress("adc_b5_ch33", adc_b5_ch33);
 
@@ -105,25 +122,87 @@ std::vector<int> GetCrossingMuonEventIds(const std::string &fpath, int config) {
             break;
         }
 
-        std::vector<unsigned short> adc_b1_ch0_vec(adc_b1_ch0,
-                                                   adc_b1_ch0 + 2000);
+        //std::vector<double> adc_b1_ch0_vec(adc_b1_ch0,
+                                                   //adc_b1_ch0 + 2000);
+        std::vector<double> adc_b1_ch0_vec = {};
+        for (int ii = 0; ii < 2000; ++ii) {
+            if (adc_b1_ch0[ii] != 0) {
+                adc_b1_ch0_vec.push_back((double)adc_b1_ch0[ii]);
+            } else {
+                break;
+            }
+        }
+        std::vector<double> adc_b4_ch13_vec;
+        std::vector<double> adc_b4_ch14_vec;
+        std::vector<double> adc_b5_ch33_vec;
+        std::vector<double> adc_b5_ch34_vec;
+        std::vector<double> adc_b5_ch35_vec;
+        for (int ii = 0; ii < 2000; ++ii) {
+            if (adc_b5_ch33[ii] != 0) {
+                adc_b5_ch33_vec.push_back((double)adc_b5_ch33[ii]);
+            } else {
+                break;
+            }
+        }
+        for (int ii = 0; ii < 2000; ++ii) {
+            if (adc_b5_ch34[ii] != 0) {
+                adc_b5_ch34_vec.push_back((double)adc_b5_ch34[ii]);
+            } else {
+                break;
+            }
+        }
+        for (int ii = 0; ii < 2000; ++ii) {
+            if (adc_b5_ch35[ii] != 0) {
+                adc_b5_ch35_vec.push_back((double)adc_b5_ch35[ii]);
+            } else {
+                break;
+            }
+        }
+        for (int ii = 0; ii < 2000; ++ii) {
+            if (adc_b4_ch13[ii] != 0) {
+                adc_b4_ch13_vec.push_back((double)adc_b4_ch13[ii]);
+            } else {
+                break;
+            }
+        }
+        for (int ii = 0; ii < 2000; ++ii) {
+            if (adc_b4_ch14[ii] != 0) {
+                adc_b4_ch14_vec.push_back((double)adc_b4_ch14[ii]);
+            } else {
+                break;
+            }
+        }
         // std::vector<unsigned short> adc_b5_ch33_vec(adc_b5_ch33, adc_b5_ch33
         // + 2000);
 
-        double median = getMedian(adc_b1_ch0_vec);
+        //double median = getMedian(adc_b1_ch0_vec);
         // double median_tp = getMedian(adc_b5_ch33_vec);
 
-        double area_bp1 = 0;
-        for (auto adc_value : adc_b1_ch0_vec) {
-            area_bp1 += (median - adc_value) * ADC_TO_MV * 2 / 50;
-        }
-        hist_bp1_area->Fill(area_bp1);
+        //double area_bp1 = 0;
+        //for (auto adc_value : adc_b1_ch0_vec) {
+        //    area_bp1 += (median - adc_value) * ADC_TO_MV * 2 / 50;
+        //}
+        //hist_bp1_area->Fill(area_bp1);
 
-        if (area_bp1 > cut_pC) {
+        //if (area_bp1 > cut_pC) {
+        if (hasValueLessThan(adc_b4_ch13_vec, 15400) && hasValueLessThan(adc_b4_ch14_vec, 15400)) {
+            std::cout << "---------------" << std::endl;
             std::cout << "event_id: " << event_id << std::endl;
-            std::cout << "area_bp1: " << area_bp1 << std::endl;
-            // std::cout << "area_tp: " << area_tp << std::endl;
-            crossingMuonEventIds.push_back(event_id);
+            std::cout << "top paddle raw signal coincidence" << std::endl;
+            std::cout << "top paddle tag: " << hasValueLessThan(adc_b5_ch33_vec, 3000) << std::endl;
+            std::cout << "alpha tag: " << hasValueLessThan(adc_b5_ch34_vec, 3000) << std::endl;
+            std::cout << "majority tag: " << hasValueLessThan(adc_b5_ch35_vec, 3000) << std::endl;
+            if (hasValueLessThan(adc_b5_ch33_vec, 3000) && hasValueLessThan(adc_b1_ch0_vec, 15400)) {
+                std::cout << "bottom paddle raw signal" << std::endl;
+                //std::cout << "area_bp1: " << area_bp1 << std::endl;
+                std::cout << "top paddle raw1 : " << hasValueLessThan(adc_b4_ch13_vec, 15000) << std::endl;
+                std::cout << "top paddle raw2 : " << hasValueLessThan(adc_b4_ch14_vec, 15000) << std::endl;
+                std::cout << "top paddle : " << hasValueLessThan(adc_b5_ch33_vec, 3000) << std::endl;
+                std::cout << "alpha : " << hasValueLessThan(adc_b5_ch34_vec, 3000) << std::endl;
+                std::cout << "majority : " << hasValueLessThan(adc_b5_ch35_vec, 3000) << std::endl;
+                // std::cout << "area_tp: " << area_tp << std::endl;
+                crossingMuonEventIds.push_back(event_id);
+            }
         }
     }
     file->Close();

@@ -56,10 +56,10 @@ public:
 
     // Static helper: Checks if the given vector contains any value smaller than the threshold.
     static bool hasValueLessThan(const std::vector<double>& vec, int threshold);
-
-private:
     // Computes the baseline as the median of a given range [start, end] (inclusive).
     int computeFlatBaseline(int start, int end) const;
+
+private:
 
     std::vector<double> samples_;         // Raw or baseline-corrected waveform samples
     std::vector<double> amp_pe_;       // PE-corrected waveform (after calling setAmpPE())

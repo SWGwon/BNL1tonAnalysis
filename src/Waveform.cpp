@@ -41,7 +41,7 @@ int Waveform::computeFlatBaseline(int start, int end) const {
     std::sort(subVector.begin(), subVector.end());
     int n = subVector.size();
     if (n % 2 == 0) {
-        return (subVector[n / 2 - 1] + subVector[n / 2]) / 2;
+        return (subVector[n / 2 - 1] + subVector[n / 2]) / 2.;
     } else {
         return subVector[n / 2];
     }
