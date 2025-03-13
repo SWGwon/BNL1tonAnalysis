@@ -175,8 +175,8 @@ void DataProcessor::processFile() {
             Waveform wf(dataStorage[i]);
 
             if (wf.getSamples().size() != 2000) {
-                std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
-                std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
+                //std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
+                //std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
                 break;
             }
@@ -190,11 +190,17 @@ void DataProcessor::processFile() {
         if (!isEventOk)
             continue;
 
-        std::vector<double> summedWaveform = processedWaveforms[0];
-        for (size_t i = 1; i < processedWaveforms.size(); ++i) {
-            std::transform(summedWaveform.begin(), summedWaveform.end(),
-                    processedWaveforms[i].begin(),
-                    summedWaveform.begin(), std::plus<double>());
+        //std::vector<double> summedWaveform = processedWaveforms[0];
+        //for (size_t i = 1; i < processedWaveforms.size(); ++i) {
+        //    std::transform(summedWaveform.begin(), summedWaveform.end(),
+        //            processedWaveforms[i].begin(),
+        //            summedWaveform.begin(), std::plus<double>());
+        //}
+        std::vector<double> summedWaveform(processedWaveforms[0].size(), 0);
+        for (size_t i = 0; i < processedWaveforms[0].size(); ++i) {
+            for (const auto &wf : processedWaveforms) {
+                summedWaveform[i] += wf[i];
+            }
         }
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
         int maxIndex = std::distance(summedWaveform.begin(), maxIt);
@@ -207,10 +213,6 @@ void DataProcessor::processFile() {
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
-
-                //Waveform topPaddleWaveform(trigDataStorage[0]);
-                //if (!Waveform::hasValueLessThan(topPaddleWaveform.getSamples(), 3000))
-                //    continue;
             }
             //alpha only
             if (config_.triggerType == 1) {
@@ -218,9 +220,6 @@ void DataProcessor::processFile() {
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
-                //Waveform alphaWaveform(trigDataStorage[1]);
-                //if (!Waveform::hasValueLessThan(alphaWaveform.getSamples(), 3000))
-                //    continue;
             }
             //majority only
             if (config_.triggerType == 2) {
@@ -228,9 +227,6 @@ void DataProcessor::processFile() {
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
-                //Waveform majorityWaveform(trigDataStorage[2]);
-                //if (!Waveform::hasValueLessThan(majorityWaveform.getSamples(), 3000))
-                //    continue;
             }
 
             //crossing muon: top paddle + bottom paddle
@@ -240,33 +236,9 @@ void DataProcessor::processFile() {
                 Waveform botPaddleWaveform(botPaddleDataStorage[0]);
                 Waveform tp1(topPaddleDataStorage[0]);
                 Waveform tp2(topPaddleDataStorage[1]);
-                //if (!Waveform::hasValueLessThan(topPaddleWaveform.getSamples(), 3000))
                 if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400) &&
                         Waveform::hasValueLessThan(tp1.getSamples(), 15400) &&
                         Waveform::hasValueLessThan(tp2.getSamples(), 15400)) {
-                    TCanvas c;
-                    c.Divide(3,3);
-                    TGraph* gr = botPaddleWaveform.drawMVAsGraph("bot paddle");
-                    TGraph* gr2 = tp1.drawMVAsGraph("raw tp1");
-                    TGraph* gr3 = tp2.drawMVAsGraph("raw tp2");
-                    c.cd(1);
-                    gr->Draw();
-                    c.cd(2);
-                    gr2->Draw();
-                    c.cd(3);
-                    gr3->Draw();
-                    for (int iii = 4; iii < 10; ++iii) {
-                        std::string ch_name = pmts_[iii];
-                        Waveform wf(dataStorage[iii]);
-                        wf.subtractFlatBaseline(0, 100);
-                        wf.setAmpPE(spe_mean_[ch_name]);
-                        wf.correctDaisyChainTrgDelay(ch_name);
-                        TGraph* tempgr = wf.drawMVAsGraph(ch_name.c_str());
-                        c.cd(iii);
-                        tempgr->Draw();
-                    }
-
-                    c.SaveAs(Form("%d.pdf",event_id));
                 } else {
                     continue;
                 }
