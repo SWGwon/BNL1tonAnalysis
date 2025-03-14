@@ -356,6 +356,8 @@ void DataProcessor::processFile() {
 void DataProcessor::saveBinaryOutput() {
     std::string fileID = extractFileID(config_.inputFileName);
     for (auto &pmt : pmts_) {
+        size_t size = pe_[pmt].size();
+        if (size == 0) break;
         std::string filename =
             config_.outputFilePath + "npe_channel_" + fileID + "_" + pmt;
         std::cout << "saving " << filename << std::endl;
@@ -365,7 +367,6 @@ void DataProcessor::saveBinaryOutput() {
                       << std::endl;
             continue;
         }
-        size_t size = pe_[pmt].size();
         file.write(reinterpret_cast<const char *>(&size), sizeof(size));
         file.write(reinterpret_cast<const char *>(pe_[pmt].data()),
                    size * sizeof(double));
