@@ -113,8 +113,18 @@ void DataProcessor::processFile() {
     const int MAX_SAMPLE_SIZE = 3000;
     TFile *inputFile = new TFile(config_.inputFileName.c_str());
     TTree *inputTree = (TTree *)inputFile->Get("daq");
+    //
+    // 브랜치 활성화 최적화
+    inputTree->SetBranchStatus("*", 0);
+
+    // TTreeCache 설정 (100MB)
+    inputTree->SetCacheSize(1 * 1024 * 1024 * 1024);
+
     UInt_t event_id;
+    inputTree->SetBranchStatus("event_id", 1);
     inputTree->SetBranchAddress("event_id", &event_id);
+    inputTree->AddBranchToCache("event_id");
+
 
     //std::vector<UShort_t *> dataStorage;
     //std::vector<UShort_t *> trigDataStorage;
@@ -153,6 +163,8 @@ void DataProcessor::processFile() {
         // 스마트 포인터 생성: UShort_t 배열 할당
         auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
         // SetBranchAddress에 내부 포인터 전달
+        inputTree->SetBranchStatus(pmt.c_str(), 1);
+        inputTree->AddBranchToCache(pmt.c_str());
         inputTree->SetBranchAddress(pmt.c_str(), tempArray.get());
         // 소유권 이전
         dataStorage.push_back(std::move(tempArray));
@@ -160,19 +172,25 @@ void DataProcessor::processFile() {
 
     for (auto &trig : triggers_) {
         auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
+        inputTree->SetBranchStatus(trig.c_str(), 1);
         inputTree->SetBranchAddress(trig.c_str(), tempArray.get());
+        inputTree->AddBranchToCache(trig.c_str());
         trigDataStorage.push_back(std::move(tempArray));
     }
 
     std::vector<std::string> topPaddlePMTs = {"adc_b4_ch13", "adc_b4_ch14"};
     for (auto &tp : topPaddlePMTs) {
         auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
+        inputTree->SetBranchStatus(tp.c_str(), 1);
         inputTree->SetBranchAddress(tp.c_str(), tempArray.get());
+        inputTree->AddBranchToCache(tp.c_str());
         topPaddleDataStorage.push_back(std::move(tempArray));
     }
 
     auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
+    inputTree->SetBranchStatus("adc_b1_ch0", 1);
     inputTree->SetBranchAddress("adc_b1_ch0", tempArray.get());
+    inputTree->AddBranchToCache("adc_b1_ch0");
     botPaddleDataStorage.push_back(std::move(tempArray));
 
 
@@ -443,7 +461,7 @@ void DataProcessor::saveRootOutput() {
 void DataProcessor::run() {
     setSPEResult(config_.inputSPECalibrationPath);
     processFile();
-    saveBinaryOutput();
+    //saveBinaryOutput();
     saveRootOutput();
 }
 
