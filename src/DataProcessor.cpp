@@ -116,33 +116,65 @@ void DataProcessor::processFile() {
     UInt_t event_id;
     inputTree->SetBranchAddress("event_id", &event_id);
 
-    std::vector<UShort_t *> dataStorage;
-    std::vector<UShort_t *> trigDataStorage;
-    std::vector<UShort_t *> botPaddleDataStorage;
-    std::vector<UShort_t *> topPaddleDataStorage;
+    //std::vector<UShort_t *> dataStorage;
+    //std::vector<UShort_t *> trigDataStorage;
+    //std::vector<UShort_t *> botPaddleDataStorage;
+    //std::vector<UShort_t *> topPaddleDataStorage;
+
+    //for (auto &pmt : pmts_) {
+    //    UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+    //    dataStorage.push_back(tempArray);
+    //    inputTree->SetBranchAddress(pmt.c_str(), tempArray);
+    //}
+
+    //for (auto &trig : triggers_) {
+    //    UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+    //    trigDataStorage.push_back(tempArray);
+    //    inputTree->SetBranchAddress(trig.c_str(), tempArray);
+    //}
+
+    //std::vector<std::string> topPaddlePMTs = {"adc_b4_ch13", "adc_b4_ch14"};
+    //for (auto &tp : topPaddlePMTs) {
+    //    UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+    //    topPaddleDataStorage.push_back(tempArray);
+    //    inputTree->SetBranchAddress(tp.c_str(), tempArray);
+    //}
+
+    //UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
+    //botPaddleDataStorage.push_back(tempArray);
+    //inputTree->SetBranchAddress("adc_b1_ch0", tempArray);
+
+    std::vector<std::unique_ptr<UShort_t[]>> dataStorage;
+    std::vector<std::unique_ptr<UShort_t[]>> trigDataStorage;
+    std::vector<std::unique_ptr<UShort_t[]>> topPaddleDataStorage;
+    std::vector<std::unique_ptr<UShort_t[]>> botPaddleDataStorage;
 
     for (auto &pmt : pmts_) {
-        UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
-        dataStorage.push_back(tempArray);
-        inputTree->SetBranchAddress(pmt.c_str(), tempArray);
+        // 스마트 포인터 생성: UShort_t 배열 할당
+        auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
+        // SetBranchAddress에 내부 포인터 전달
+        inputTree->SetBranchAddress(pmt.c_str(), tempArray.get());
+        // 소유권 이전
+        dataStorage.push_back(std::move(tempArray));
     }
 
     for (auto &trig : triggers_) {
-        UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
-        trigDataStorage.push_back(tempArray);
-        inputTree->SetBranchAddress(trig.c_str(), tempArray);
+        auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
+        inputTree->SetBranchAddress(trig.c_str(), tempArray.get());
+        trigDataStorage.push_back(std::move(tempArray));
     }
 
     std::vector<std::string> topPaddlePMTs = {"adc_b4_ch13", "adc_b4_ch14"};
     for (auto &tp : topPaddlePMTs) {
-        UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
-        topPaddleDataStorage.push_back(tempArray);
-        inputTree->SetBranchAddress(tp.c_str(), tempArray);
+        auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
+        inputTree->SetBranchAddress(tp.c_str(), tempArray.get());
+        topPaddleDataStorage.push_back(std::move(tempArray));
     }
 
-    UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
-    botPaddleDataStorage.push_back(tempArray);
-    inputTree->SetBranchAddress("adc_b1_ch0", tempArray);
+    auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
+    inputTree->SetBranchAddress("adc_b1_ch0", tempArray.get());
+    botPaddleDataStorage.push_back(std::move(tempArray));
+
 
     int start = 0, end = 0;
     if (config_.triggerType == 0 || config_.triggerType == 3) {
@@ -159,10 +191,29 @@ void DataProcessor::processFile() {
     int event_number = (config_.eventNumber > inputTree->GetEntries() ?
             inputTree->GetEntries() : config_.eventNumber);
 
+
+    //TH1D* hist_bp1_area = new TH1D("hist_bp1_area", "hist_bp1_area", 100,0,100);
+    int tpTriggered = 0;
+    int alphaTriggered = 0;
+    int majorityTriggered = 0;
     for (int ievt = 0; ievt < event_number; ++ievt) {
         inputTree->GetEntry(ievt);
         if (ievt % 1000 == 0)
             std::cout << event_id << std::endl;
+        //crossing muon: top paddle + bottom paddle
+        //using raw pmt waveform
+        if (config_.triggerType == 3) {
+            Waveform botPaddleWaveform(botPaddleDataStorage[0].get());
+            Waveform tp1(topPaddleDataStorage[0].get());
+            Waveform tp2(topPaddleDataStorage[1].get());
+            if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400) &&
+                    Waveform::hasValueLessThan(tp1.getSamples(), 15400) &&
+                    Waveform::hasValueLessThan(tp2.getSamples(), 15400)) {
+                std::cout << "crossing muon event: " << event_id << std::endl;
+            } else {
+                continue;
+            }
+        }
 
         bool isEventOk = true;
         std::vector<std::vector<double>> processedWaveforms;
@@ -170,9 +221,10 @@ void DataProcessor::processFile() {
         std::vector<double> peValues;
         peValues.reserve(pmts_.size());
 
+
         for (size_t i = 0; i < pmts_.size(); ++i) {
             std::string ch_name = pmts_[i];
-            Waveform wf(dataStorage[i]);
+            Waveform wf(dataStorage[i].get());
 
             if (wf.getSamples().size() != 2000) {
                 //std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
@@ -204,7 +256,47 @@ void DataProcessor::processFile() {
         }
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
         int maxIndex = std::distance(summedWaveform.begin(), maxIt);
+        if (maxIndex > 380 && maxIndex < 450) {
+            tpTriggered++;
+        //    Waveform botPaddleWaveform(botPaddleDataStorage[0]);
+        //    botPaddleWaveform.subtractFlatBaseline(0, sizeof(botPaddleDataStorage[0]) -1);
+        //    botPaddleWaveform.setAmpPE(1.0,1.0);
+        //    double tempPE = botPaddleWaveform.getPE(0, sizeof(botPaddleDataStorage[0]) -1);
+        //    hist_bp1_area->Fill(tempPE);
+        }
+        if (maxIndex > 320 && maxIndex < 490) 
+            alphaTriggered++;
+        if (maxIndex > 160 && maxIndex < 230) 
+            majorityTriggered++;
 
+        //Waveform botPaddleWaveform(botPaddleDataStorage[0]);
+        //Waveform tp(trigDataStorage[0]);
+        //Waveform majority(trigDataStorage[2]);
+        //if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400) &&
+        //        Waveform::hasValueLessThan(tp.getSamples(), 3000) && Waveform::hasValueLessThan(majority.getSamples(),3000)) {
+        //    TCanvas c;
+        //    c.Divide(3,3);
+        //    c.cd(1);
+        //    TGraph* gr = botPaddleWaveform.drawMVAsGraph("bot paddle raw");
+        //    gr->Draw();
+        //    c.cd(2);
+        //    gr = tp.drawMVAsGraph("tp tag");
+        //    gr->Draw();
+        //    c.cd(3);
+        //    gr = majority.drawMVAsGraph("majority tag raw");
+        //    gr->Draw();
+        //    for (int iii = 4; iii < 10; ++iii) {
+        //        c.cd(iii);
+        //        std::string ch_name = pmts_[iii];
+        //        Waveform wf(dataStorage[iii]);
+        //        wf.subtractFlatBaseline(0, 100);
+        //        wf.setAmpPE(spe_mean_[ch_name]);
+        //        wf.correctDaisyChainTrgDelay(ch_name);
+        //        gr = wf.drawMVAsGraph(ch_name.c_str());
+        //        gr->Draw();
+        //    }
+        //    c.SaveAs(Form("%d.pdf", event_id));
+        //}
         // checking trigger, based on peak time
         if (config_.triggerType != -1) {
             //tp only
@@ -233,12 +325,13 @@ void DataProcessor::processFile() {
             //using raw pmt waveform
             if (config_.triggerType == 3) {
                 if (maxIndex < 380 || maxIndex > 450) continue;
-                Waveform botPaddleWaveform(botPaddleDataStorage[0]);
-                Waveform tp1(topPaddleDataStorage[0]);
-                Waveform tp2(topPaddleDataStorage[1]);
+                Waveform botPaddleWaveform(botPaddleDataStorage[0].get());
+                Waveform tp1(topPaddleDataStorage[0].get());
+                Waveform tp2(topPaddleDataStorage[1].get());
                 if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400) &&
                         Waveform::hasValueLessThan(tp1.getSamples(), 15400) &&
                         Waveform::hasValueLessThan(tp2.getSamples(), 15400)) {
+                std::cout << "crossing muon event: " << event_id << std::endl;
                 } else {
                     continue;
                 }
@@ -249,6 +342,13 @@ void DataProcessor::processFile() {
             }
         }
     }
+    std::cout << "tpTriggered: " << tpTriggered << std::endl;
+    std::cout << "alphaTriggered: " << alphaTriggered << std::endl;
+    std::cout << "majorityTriggered: " << majorityTriggered << std::endl;
+
+    //TCanvas c;
+    //hist_bp1_area->Draw();
+    //c.SaveAs("bp.pdf");
 
     inputFile->Close();
 }
