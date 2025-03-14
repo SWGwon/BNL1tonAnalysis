@@ -58,8 +58,9 @@ AppConfig AppConfig::parseArgs(int argc, char **argv) {
                       << std::endl;
             std::cout << "                              0: tp" << std::endl;
             std::cout << "                              1: alpha" << std::endl;
-            std::cout << "                              2: majority"
-                      << std::endl;
+            std::cout << "                              2: majority" << std::endl;
+            std::cout << "                              3: crossing muon" << std::endl;
+            std::cout << "                              4: crossing muon (before majority setup)" << std::endl;
             std::cout << "  -c <inputSPECalibrationPath>  Path to the SPE "
                          "calibration file."
                       << std::endl;

@@ -109,6 +109,14 @@ double getMedian(std::vector<unsigned short> &arr) {
     //}
 }
 
+UShort_t GetMin(UShort_t *arr, Int_t n) {
+    UShort_t min = arr[0];
+    for (Int_t i = 1; i < n; i++) {
+        if (arr[i] < min) min = arr[i];
+    }
+    return min;
+}
+
 void DataProcessor::processFile() {
     const int MAX_SAMPLE_SIZE = 3000;
     TFile *inputFile = new TFile(config_.inputFileName.c_str());
@@ -116,15 +124,13 @@ void DataProcessor::processFile() {
     //
     // 브랜치 활성화 최적화
     inputTree->SetBranchStatus("*", 0);
-
     // TTreeCache 설정 (100MB)
-    inputTree->SetCacheSize(1 * 1024 * 1024 * 1024);
+    //inputTree->SetCacheSize(2LL * 1024 * 1024 * 1024);
 
     UInt_t event_id;
     inputTree->SetBranchStatus("event_id", 1);
     inputTree->SetBranchAddress("event_id", &event_id);
     inputTree->AddBranchToCache("event_id");
-
 
     //std::vector<UShort_t *> dataStorage;
     //std::vector<UShort_t *> trigDataStorage;
@@ -204,6 +210,9 @@ void DataProcessor::processFile() {
     } else if (config_.triggerType == 2) {
         start = 160;
         end = 230;
+    } else if (config_.triggerType == 4) {
+        start = 150;
+        end = 210;
     }
 
     int event_number = (config_.eventNumber > inputTree->GetEntries() ?
@@ -220,7 +229,7 @@ void DataProcessor::processFile() {
             std::cout << event_id << std::endl;
         //crossing muon: top paddle + bottom paddle
         //using raw pmt waveform
-        if (config_.triggerType == 3) {
+        if (config_.triggerType == 3 || config_.triggerType == 4) {
             Waveform botPaddleWaveform(botPaddleDataStorage[0].get());
             Waveform tp1(topPaddleDataStorage[0].get());
             Waveform tp2(topPaddleDataStorage[1].get());
@@ -341,8 +350,9 @@ void DataProcessor::processFile() {
 
             //crossing muon: top paddle + bottom paddle
             //using raw pmt waveform
-            if (config_.triggerType == 3) {
-                if (maxIndex < 380 || maxIndex > 450) continue;
+            if (config_.triggerType == 3 || config_.triggerType == 4) {
+                if (config_.triggerType == 3)
+                    if (maxIndex < 380 || maxIndex > 450) continue;
                 Waveform botPaddleWaveform(botPaddleDataStorage[0].get());
                 Waveform tp1(topPaddleDataStorage[0].get());
                 Waveform tp2(topPaddleDataStorage[1].get());
@@ -406,7 +416,7 @@ void DataProcessor::saveRootOutput() {
         outputFile = new TFile((config_.outputFilePath + "/output_alpha_" + fileID + ".root").c_str(), "RECREATE");
     if (config_.triggerType == 2)
         outputFile = new TFile((config_.outputFilePath + "/output_majority_" + fileID + ".root").c_str(), "RECREATE");
-    if (config_.triggerType == 3)
+    if (config_.triggerType == 3 || config_.triggerType == 4)
         outputFile = new TFile((config_.outputFilePath + "/output_crossing_muon_" + fileID + ".root").c_str(), "RECREATE");
 
     // Create a new TTree.
