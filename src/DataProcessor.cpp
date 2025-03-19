@@ -227,8 +227,10 @@ void DataProcessor::processFile() {
         inputTree->GetEntry(ievt);
         if (ievt % 1000 == 0)
             std::cout << event_id << std::endl;
+
         //crossing muon: top paddle + bottom paddle
         //using raw pmt waveform
+        bool isCrossingMuon = false;
         if (config_.triggerType == 3 || config_.triggerType == 4) {
             Waveform botPaddleWaveform(botPaddleDataStorage[0].get());
             Waveform tp1(topPaddleDataStorage[0].get());
@@ -237,6 +239,7 @@ void DataProcessor::processFile() {
                     Waveform::hasValueLessThan(tp1.getSamples(), 15400) &&
                     Waveform::hasValueLessThan(tp2.getSamples(), 15400)) {
                 std::cout << "crossing muon event: " << event_id << std::endl;
+                isCrossingMuon = true;
             } else {
                 continue;
             }
@@ -247,7 +250,6 @@ void DataProcessor::processFile() {
         processedWaveforms.reserve(pmts_.size());
         std::vector<double> peValues;
         peValues.reserve(pmts_.size());
-
 
         for (size_t i = 0; i < pmts_.size(); ++i) {
             std::string ch_name = pmts_[i];
@@ -283,7 +285,7 @@ void DataProcessor::processFile() {
         }
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
         int maxIndex = std::distance(summedWaveform.begin(), maxIt);
-        if (maxIndex > 380 && maxIndex < 450) {
+        if (maxIndex > start && maxIndex < end) {
             tpTriggered++;
         //    Waveform botPaddleWaveform(botPaddleDataStorage[0]);
         //    botPaddleWaveform.subtractFlatBaseline(0, sizeof(botPaddleDataStorage[0]) -1);
@@ -291,9 +293,9 @@ void DataProcessor::processFile() {
         //    double tempPE = botPaddleWaveform.getPE(0, sizeof(botPaddleDataStorage[0]) -1);
         //    hist_bp1_area->Fill(tempPE);
         }
-        if (maxIndex > 320 && maxIndex < 490) 
+        if (maxIndex > start && maxIndex < end) 
             alphaTriggered++;
-        if (maxIndex > 160 && maxIndex < 230) 
+        if (maxIndex > start && maxIndex < end) 
             majorityTriggered++;
 
         //Waveform botPaddleWaveform(botPaddleDataStorage[0]);
@@ -328,41 +330,35 @@ void DataProcessor::processFile() {
         if (config_.triggerType != -1) {
             //tp only
             if (config_.triggerType == 0) {
-                if (maxIndex < 380 || maxIndex > 450) {
+                if (maxIndex < start-20 || maxIndex > end+20) {
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
             }
             //alpha only
             if (config_.triggerType == 1) {
-                if (maxIndex < 320 || maxIndex > 390) {
+                if (maxIndex < start-20 || maxIndex > end+20) {
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
             }
             //majority only
             if (config_.triggerType == 2) {
-                if (maxIndex < 160 || maxIndex > 230) {
+                if (maxIndex < start-20 || maxIndex > end+20) {
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
             }
 
+
+
             //crossing muon: top paddle + bottom paddle
             //using raw pmt waveform
             if (config_.triggerType == 3 || config_.triggerType == 4) {
                 if (config_.triggerType == 3)
-                    if (maxIndex < 380 || maxIndex > 450) continue;
-                Waveform botPaddleWaveform(botPaddleDataStorage[0].get());
-                Waveform tp1(topPaddleDataStorage[0].get());
-                Waveform tp2(topPaddleDataStorage[1].get());
-                if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400) &&
-                        Waveform::hasValueLessThan(tp1.getSamples(), 15400) &&
-                        Waveform::hasValueLessThan(tp2.getSamples(), 15400)) {
-                std::cout << "crossing muon event: " << event_id << std::endl;
-                } else {
+                    if (maxIndex < start || maxIndex > end) continue;
+                if (!isCrossingMuon)
                     continue;
-                }
             }
             for (size_t i = 0; i < pmts_.size(); ++i) {
                 std::string ch_name = pmts_[i];
