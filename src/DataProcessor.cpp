@@ -856,7 +856,8 @@ void DataProcessor::dailyCheck30t() {
         for (size_t i = 0; i < pmts30t.size(); ++i) {
             std::string ch_name = pmts30t[i];
             Waveform wf(dataStorage[i]);
-            if (wf.getSamples().size() != 2000) {
+            //if (wf.getSamples().size() != 2000) {
+            if (wf.getSamples().size() != 1920) {
                 std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
                 std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
