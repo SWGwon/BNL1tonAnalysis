@@ -749,6 +749,10 @@ void DataProcessor::dailyCheck30t() {
     TH1D* histSidePE = new TH1D("histSidePE", "histSidePE;PE;counts", 100, 0, 2400);
     TH2D* histBotSidePE = new TH2D("histBotSidePE", (fileID + ";Bot PE;Side PE").c_str(), 100,0,2400, 100, 0,2400);
 
+    TH1D* histBotPE_crossing_muon = new TH1D("histBotPE_crossing_muon", "histBotPE_crossing_muon;PE;counts", 100, 0, 2400);
+    TH1D* histSidePE_crossing_muon = new TH1D("histSidePE_crossing_muon", "histSidePE_crossing_muon;PE;counts", 100, 0, 2400);
+    TH2D* histBotSidePE_crossing_muon = new TH2D("histBotSidePE_crossing_muon", (fileID + "_crossing_muon;Bot PE;Side PE").c_str(), 100,0,2400, 100, 0,2400);
+
     int branchIndex = 0;
     std::vector<double> outputPE(pmts30t.size(), 0.0);
 
@@ -1000,10 +1004,14 @@ void DataProcessor::dailyCheck30t() {
         sideMV = tempSideMV;
         histBotSideMV->Fill(tempBotMV,tempSideMV);
 
+        histBotPE->Fill(tempBotPE);
+        histSidePE->Fill(tempSidePE);
+        histBotSidePE->Fill(tempBotPE,tempSidePE);
+
         if (ifBotPaddleFired) {
-            histBotPE->Fill(tempBotPE);
-            histSidePE->Fill(tempSidePE);
-            histBotSidePE->Fill(tempBotPE,tempSidePE);
+            histBotPE_crossing_muon->Fill(tempBotPE);
+            histSidePE_crossing_muon->Fill(tempSidePE);
+            histBotSidePE_crossing_muon->Fill(tempBotPE,tempSidePE);
         }
         bottomPE = tempBotPE;
         sidePE = tempSidePE;
@@ -1078,6 +1086,23 @@ void DataProcessor::dailyCheck30t() {
     histBotSidePE->Draw();
     c9->SaveAs((filename + "_2dPE.pdf").c_str());
 
+    TCanvas* c10 = new TCanvas();
+    c10->SetLogy();
+    histBotPE_crossing_muon->Draw();
+    std::cout << "saving " << filename + "_crossing_muon_BotPE.pdf" << std::endl;
+    c10->SaveAs((filename + "_crossing_muon_BotPE.pdf").c_str());
+
+    TCanvas* c11 = new TCanvas();
+    c11->SetLogy();
+    histSidePE_crossing_muon->Draw();
+    std::cout << "saving " << filename + "_crossing_muon_SidePE.pdf" << std::endl;
+    c11->SaveAs((filename + "_crossing_muon_SidePE.pdf").c_str());
+
+    TCanvas* c12 = new TCanvas();
+    c12->SetLogz();
+    histBotSidePE_crossing_muon->Draw();
+    c12->SaveAs((filename + "_crossing_muon_2dPE.pdf").c_str());
+
     inputFile->Close();
 
     histBotMV->Write();
@@ -1086,6 +1111,9 @@ void DataProcessor::dailyCheck30t() {
     histBotPE->Write();
     histSidePE->Write();
     histBotSidePE->Write();
+    histBotPE_crossing_muon->Write();
+    histSidePE_crossing_muon->Write();
+    histBotSidePE_crossing_muon->Write();
     outputTree->Write();
     outputFile->Close();
 }
