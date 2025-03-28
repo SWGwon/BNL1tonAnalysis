@@ -59,8 +59,11 @@ public:
     // Computes the baseline as the median of a given range [start, end] (inclusive).
     int computeFlatBaseline(int start, int end) const;
 
-private:
+    void setName(std::string ch_name) {this->ch_name_ = ch_name;};
+    std::string getName() {return this->ch_name_;};
 
+private:
+    std::string ch_name_;
     std::vector<double> samples_;         // Raw or baseline-corrected waveform samples
     std::vector<double> amp_pe_;       // PE-corrected waveform (after calling setAmpPE())
 };

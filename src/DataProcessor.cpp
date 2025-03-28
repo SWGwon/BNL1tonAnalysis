@@ -344,13 +344,15 @@ void DataProcessor::processFile() {
             }
             //majority only
             if (config_.triggerType == 2) {
+                //Waveform majority(trigDataStorage[2].get());
+                //if (!Waveform::hasValueLessThan(majority.getSamples(),3000)) {
+                //    continue;
+                //}
                 if (maxIndex < start-20 || maxIndex > end+20) {
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
             }
-
-
 
             //crossing muon: top paddle + bottom paddle
             //using raw pmt waveform
@@ -467,8 +469,24 @@ void DataProcessor::saveRootOutput() {
 void DataProcessor::run() {
     setSPEResult(config_.inputSPECalibrationPath);
     processFile();
-    //saveBinaryOutput();
+    saveBinaryOutput();
     saveRootOutput();
+}
+
+void DataProcessor::DrawWaveforms(int event_id, std::vector<Waveform> waveforms) {
+    int size = waveforms.size();
+    int cols = std::ceil(std::sqrt(size));
+    int rows = std::ceil(static_cast<double>(size) / cols);
+
+    TCanvas can("canvas", "Waveforms", 800, 600);
+    can.Divide(cols, rows);
+
+    for (int i = 0; i < size; ++i) {
+         can.cd(i + 1);
+         TGraph* gr = waveforms[i].drawMVAsGraph(waveforms[i].getName());
+         gr->Draw();
+    }
+    can.SaveAs(Form("waveforms_%d.pdf", event_id));
 }
 
 void DataProcessor::dailyCheck() {
@@ -543,19 +561,26 @@ void DataProcessor::dailyCheck() {
         // is exceeded)
         std::vector<int> top1, top2, bot1, bot2;
         std::vector<double> summedWaveform;
+        std::vector<Waveform> waveforms;
         double schn[97] = {0};
 
         // Process waveform for each PMT channel
         for (size_t i = 0; i < pmts_.size(); ++i) {
             const std::string &ch_name = pmts_[i];
             Waveform wf(dataStorage[i]);
+            wf.setName(ch_name);
+            waveforms.push_back(wf);
             if (wf.getSamples().size() < 100) {
                 std::cout << wf.getSamples().size() << std::endl;
                 std::cout << ievt << std::endl;
                 std::cout << ch_name << std::endl;
                 break;
             }
-            wf.subtractFlatBaseline(0, 100);
+            try {
+                wf.subtractFlatBaseline(0, 100);
+            } catch (...) {
+                continue;
+            }
             double spe = (spe_mean_.count(ch_name) > 0) ? spe_mean_[ch_name]
                                                         : 0.267534455;
             wf.setAmpPE(spe);
@@ -571,12 +596,18 @@ void DataProcessor::dailyCheck() {
                                std::plus<double>());
             }
 
+            if (wf.getAmpPE().size() == 0)
+                continue;
+
             // Calculate PE value for the channel and fill its histogram
             double pe_value = wf.getPE(0, wf.getAmpPE().size() - 1);
             pe_[ch_name].push_back(pe_value);
             schn[i] = pe_value;
             histPMTPE[ch_name]->Fill(pe_value);
         }
+
+        DrawWaveforms(event_id, waveforms);
+
 
         // Fill the histogram for the maximum waveform index based on the summed
         // waveform

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "Waveform.h"
 
 class DataProcessor {
 public:
@@ -16,6 +17,7 @@ public:
     void saveRootOutput();
     void setPMTs(std::vector<std::string> pmts) {this->pmts_ = pmts;};
     void setTriggers(std::vector<std::string> triggers) {this->triggers_ = triggers;};
+    void DrawWaveforms(int event_id, std::vector<Waveform> waveforms);
 private:
     AppConfig config_;
     std::vector<std::string> pmts_; //data analysis
