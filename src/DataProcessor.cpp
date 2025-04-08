@@ -257,7 +257,7 @@ void DataProcessor::processFile() {
 
             if (wf.getSamples().size() != config_.sampleSize) {
                 std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
-                std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
+                std::cout << "configed sample size: " << config_.sampleSize << ", but " << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
                 break;
             }
@@ -894,7 +894,7 @@ void DataProcessor::dailyCheck30t() {
             //if (wf.getSamples().size() != 2000) {
             if (wf.getSamples().size() != config_.sampleSize) {
                 std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
-                std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
+                std::cout << "configed sample size: " << config_.sampleSize << ", but " << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
                 break;
             }

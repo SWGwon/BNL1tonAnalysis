@@ -59,7 +59,7 @@ AppConfig AppConfig::parseArgs(int argc, char **argv) {
                     << "  -n <eventNumber>            Event number to process."
                     << std::endl;
                 std::cout
-                    << "  -n <sampleSize>            Number of samples (b1 ~ b4, time window / 2)."
+                    << "  -s <sampleSize>            Number of samples (b1 ~ b4, time window / 2)."
                     << std::endl;
                 std::cout << "  -t <triggerType>            Trigger type:"
                     << std::endl;
@@ -86,7 +86,7 @@ AppConfig AppConfig::parseArgs(int argc, char **argv) {
             << "  -n <eventNumber>            Event number to process."
             << std::endl;
         std::cout
-            << "  -n <sampleSize>            Number of samples (b1 ~ b4, time window / 2)."
+            << "  -s <sampleSize>            Number of samples (b1 ~ b4, time window / 2)."
             << std::endl;
         std::cout << "  -t <triggerType>            Trigger type:"
             << std::endl;
