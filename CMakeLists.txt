@@ -42,6 +42,11 @@ add_executable(DailyCheck30T src/DailyCheck30T.cpp src/Waveform.cpp
 target_include_directories(DailyCheck30T PUBLIC ${ROOT_INCLUDE_DIRS})
 target_link_libraries(DailyCheck30T PUBLIC ROOT::RIO ROOT::Net ROOT::Hist ROOT::Tree ROOT::TreePlayer ROOT::MathCore ROOT::Thread Threads::Threads)
 
+add_executable(ConvertMCtoDataFormat src/ConvertMCtoDataFormat.cpp
+    src/AppConfig.cpp)
+target_include_directories(ConvertMCtoDataFormat PUBLIC ${ROOT_INCLUDE_DIRS})
+target_link_libraries(ConvertMCtoDataFormat PUBLIC ROOT::RIO ROOT::Net ROOT::Hist ROOT::Tree ROOT::TreePlayer ROOT::MathCore ROOT::Thread Threads::Threads)
+
 #find_package(OSQP REQUIRED)
 #find_package(OsqpEigen REQUIRED)
 #
