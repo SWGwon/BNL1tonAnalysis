@@ -10,6 +10,7 @@ public:
     std::string inputSPECalibrationPath;
     int eventNumber;
     int triggerType;
+    int sampleSize;
 
     AppConfig();
 

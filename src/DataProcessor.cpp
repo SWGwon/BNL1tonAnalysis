@@ -255,9 +255,9 @@ void DataProcessor::processFile() {
             std::string ch_name = pmts_[i];
             Waveform wf(dataStorage[i].get());
 
-            if (wf.getSamples().size() != 2000) {
-                //std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
-                //std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
+            if (wf.getSamples().size() != config_.sampleSize) {
+                std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
+                std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
                 break;
             }
@@ -892,7 +892,7 @@ void DataProcessor::dailyCheck30t() {
             std::string ch_name = pmts30t[i];
             Waveform wf(dataStorage[i]);
             //if (wf.getSamples().size() != 2000) {
-            if (wf.getSamples().size() != 1920) {
+            if (wf.getSamples().size() != config_.sampleSize) {
                 std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
                 std::cout << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
