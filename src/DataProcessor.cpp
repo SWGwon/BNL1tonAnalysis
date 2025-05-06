@@ -469,7 +469,7 @@ void DataProcessor::saveRootOutput() {
 void DataProcessor::run() {
     setSPEResult(config_.inputSPECalibrationPath);
     processFile();
-    saveBinaryOutput();
+    //saveBinaryOutput();
     saveRootOutput();
 }
 
@@ -776,13 +776,20 @@ void DataProcessor::dailyCheck30t() {
     TH1D* histSideMV = new TH1D("histSideMV", "histSideMV;mV * 2ns;counts", 100, 0, 60000);
     TH2D* histBotSideMV = new TH2D("histBotSideMV", (fileID + ";Bot mV * 2ns;Side mv * 2ns").c_str(), 100,0,60000, 100, 0, 60000);
 
-    TH1D* histBotPE = new TH1D("histBotPE", "histBotPE;PE;counts", 100, 0, 2400);
-    TH1D* histSidePE = new TH1D("histSidePE", "histSidePE;PE;counts", 100, 0, 2400);
+    TH1D* histBotPE = new TH1D("histBotPE", "histBotPE;PE;counts", 100, 0, 5000);
+    TH1D* histSidePE = new TH1D("histSidePE", "histSidePE;PE;counts", 100, 0, 5000);
     TH2D* histBotSidePE = new TH2D("histBotSidePE", (fileID + ";Bot PE;Side PE").c_str(), 100,0,2400, 100, 0,2400);
 
-    TH1D* histBotPE_crossing_muon = new TH1D("histBotPE_crossing_muon", "histBotPE_crossing_muon;PE;counts", 100, 0, 2400);
-    TH1D* histSidePE_crossing_muon = new TH1D("histSidePE_crossing_muon", "histSidePE_crossing_muon;PE;counts", 100, 0, 2400);
+    TH1D* histBotPE_crossing_muon = new TH1D("histBotPE_crossing_muon", "histBotPE_crossing_muon;PE;counts", 100, 0, 5000);
+    TH1D* histSidePE_crossing_muon = new TH1D("histSidePE_crossing_muon", "histSidePE_crossing_muon;PE;counts", 100, 0, 5000);
     TH2D* histBotSidePE_crossing_muon = new TH2D("histBotSidePE_crossing_muon", (fileID + "_crossing_muon;Bot PE;Side PE").c_str(), 100,0,2400, 100, 0,2400);
+
+    TH1D* histSide12PE = new TH1D("histSide12PE", "histSide12PE;PE;counts", 100, 0, 5000);
+    TH2D* histBotSide12PE = new TH2D("histBotSide12PE", (fileID + ";Bot+low2row PE;Side2row PE").c_str(), 100,0,2400, 100, 0,2400);
+    
+    TH1D* histSide12PE_crossing_muon = new TH1D("histSide12PE_crossing_muon", "histSide12PE_crossing_muon;PE;counts", 100, 0, 5000);
+    TH2D* histBotSide12PE_crossing_muon = new TH2D("histBotSide12PE_crossing_muon", (fileID + "_crossing_muon;Bot+low2row PE;Side2row PE").c_str(), 100,0,2400, 100, 0,2400);
+
 
     int branchIndex = 0;
     std::vector<double> outputPE(pmts30t.size(), 0.0);
@@ -805,6 +812,8 @@ void DataProcessor::dailyCheck30t() {
     outputTree->Branch("bottomPE", &bottomPE);
     double sidePE = 0;
     outputTree->Branch("sidePE", &sidePE);
+    double side12PE = 0;
+    outputTree->Branch("side12PE", &side12PE);
 
     for (auto &trig : triggers_30t_) {
         UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
@@ -844,6 +853,8 @@ void DataProcessor::dailyCheck30t() {
         double tempSideMV = 0;
         double tempBotPE = 0;
         double tempSidePE = 0;
+	double tempSide12PE = 0;
+	double tempSide12MV = 0;
         std::vector<double> summedWaveform;
 
         bool alpha_triggered = false;
@@ -1003,6 +1014,16 @@ void DataProcessor::dailyCheck30t() {
                     tempSidePE += pe_value;
                     tempSideMV += mV_value;
                 }
+		if (branchIndex == 12 || branchIndex == 13 ||
+		    branchIndex == 16 || branchIndex == 17 ||
+    		    branchIndex == 20 || branchIndex == 21 ||
+		    branchIndex == 24 || branchIndex == 25 ||
+		    branchIndex == 28 || branchIndex == 29 ||
+		    branchIndex == 32 || branchIndex == 33 
+		){
+		    tempSide12PE += pe_value;
+		    tempSide12MV += pe_value;
+		}
             }
             tempIndex++;
             branchIndex++;
@@ -1039,13 +1060,21 @@ void DataProcessor::dailyCheck30t() {
         histSidePE->Fill(tempSidePE);
         histBotSidePE->Fill(tempBotPE,tempSidePE);
 
+        histSide12PE->Fill(tempSide12PE);
+        histBotSide12PE->Fill(tempBotPE+tempSidePE-tempSide12PE,tempSide12PE);
+
         if (ifBotPaddleFired) {
             histBotPE_crossing_muon->Fill(tempBotPE);
             histSidePE_crossing_muon->Fill(tempSidePE);
             histBotSidePE_crossing_muon->Fill(tempBotPE,tempSidePE);
+
+    	    histSide12PE_crossing_muon->Fill(tempSide12PE);
+            histBotSide12PE_crossing_muon->Fill(tempBotPE+tempSidePE-tempSide12PE,tempSide12PE);
+
         }
         bottomPE = tempBotPE;
         sidePE = tempSidePE;
+	side12PE = tempSide12PE;
 
         outputTree->Fill();
     } // end event loop
@@ -1145,6 +1174,12 @@ void DataProcessor::dailyCheck30t() {
     histBotPE_crossing_muon->Write();
     histSidePE_crossing_muon->Write();
     histBotSidePE_crossing_muon->Write();
+
+    histSide12PE->Write();
+    histBotSide12PE->Write();
+    histSide12PE_crossing_muon->Write();
+    histBotSide12PE_crossing_muon->Write();
+    
     outputTree->Write();
     outputFile->Close();
 }
