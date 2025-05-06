@@ -362,10 +362,13 @@ void DataProcessor::processFile() {
                 if (!isCrossingMuon)
                     continue;
             }
+            double totalPE = 0;
             for (size_t i = 0; i < pmts_.size(); ++i) {
                 std::string ch_name = pmts_[i];
                 pe_[ch_name].push_back(peValues[i]);
+                totalPE += peValues[i];
             }
+            std::cout << "totalPE: " << totalPE << std::endl;
         }
     }
     std::cout << "tpTriggered: " << tpTriggered << std::endl;
