@@ -247,6 +247,7 @@ void DataProcessor::processFile() {
 
         bool isEventOk = true;
         std::vector<std::vector<double>> processedWaveforms;
+        std::vector<Waveform> rawWaveforms;
         processedWaveforms.reserve(pmts_.size());
         std::vector<double> peValues;
         peValues.reserve(pmts_.size());
@@ -254,6 +255,7 @@ void DataProcessor::processFile() {
         for (size_t i = 0; i < pmts_.size(); ++i) {
             std::string ch_name = pmts_[i];
             Waveform wf(dataStorage[i].get());
+            rawWaveforms.push_back(wf);
 
             if (wf.getSamples().size() != config_.sampleSize) {
                 std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
@@ -369,6 +371,8 @@ void DataProcessor::processFile() {
                 totalPE += peValues[i];
             }
             std::cout << "totalPE: " << totalPE << std::endl;
+            if (isCrossingMuon)
+                DrawWaveforms(event_id, rawWaveforms);
         }
     }
     std::cout << "tpTriggered: " << tpTriggered << std::endl;
