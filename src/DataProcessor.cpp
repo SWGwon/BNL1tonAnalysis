@@ -354,6 +354,7 @@ void DataProcessor::processFile() {
             }
 
             for (size_t i = 0; i < pmts_.size(); ++i) {
+                Waveform wf(dataStorage[i].get());
                 double pe_value = wf.getPE(maxIndex - 20, maxIndex + 40);
                 std::cout << "peak time " << maxIndex << ", window: " << maxIndex - 20 << " ~ " << maxIndex + 40 << std::endl;
                 peValues.push_back(pe_value);
