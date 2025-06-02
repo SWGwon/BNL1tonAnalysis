@@ -206,7 +206,7 @@ void DataProcessor::processFile() {
         end = 450;
     } else if (config_.triggerType == 1) {
         start = 320;
-        end = 390;
+        end = 360;
     } else if (config_.triggerType == 2) {
         start = 160;
         end = 230;
@@ -266,19 +266,13 @@ void DataProcessor::processFile() {
             wf.subtractFlatBaseline(0, 100);
             wf.setAmpPE(spe_mean_[ch_name]);
             wf.correctDaisyChainTrgDelay(ch_name);
-            double pe_value = wf.getPE(start, end);
-            peValues.push_back(pe_value);
+            //double pe_value = wf.getPE(start, end);
+            //peValues.push_back(pe_value);
             processedWaveforms.push_back(wf.getSamples());
         }
         if (!isEventOk)
             continue;
 
-        //std::vector<double> summedWaveform = processedWaveforms[0];
-        //for (size_t i = 1; i < processedWaveforms.size(); ++i) {
-        //    std::transform(summedWaveform.begin(), summedWaveform.end(),
-        //            processedWaveforms[i].begin(),
-        //            summedWaveform.begin(), std::plus<double>());
-        //}
         std::vector<double> summedWaveform(processedWaveforms[0].size(), 0);
         for (size_t i = 0; i < processedWaveforms[0].size(); ++i) {
             for (const auto &wf : processedWaveforms) {
@@ -333,6 +327,7 @@ void DataProcessor::processFile() {
             //tp only
             if (config_.triggerType == 0) {
                 if (maxIndex < start-20 || maxIndex > end+20) {
+                    std::cout << "configured: top paddle" << std::endl;
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
@@ -340,6 +335,7 @@ void DataProcessor::processFile() {
             //alpha only
             if (config_.triggerType == 1) {
                 if (maxIndex < start-20 || maxIndex > end+20) {
+                    std::cout << "configured: alpha" << std::endl;
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
@@ -351,9 +347,16 @@ void DataProcessor::processFile() {
                 //    continue;
                 //}
                 if (maxIndex < start-20 || maxIndex > end+20) {
+                    std::cout << "configured: majority" << std::endl;
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
+            }
+
+            for (size_t i = 0; i < pmts_.size(); ++i) {
+                double pe_value = wf.getPE(maxIndex - 20, maxIndex + 40);
+                std::cout << "peak time " << maxIndex << ", window: " << maxIndex - 20 << " ~ " << maxIndex + 40 << std::endl;
+                peValues.push_back(pe_value);
             }
 
             //crossing muon: top paddle + bottom paddle
@@ -371,8 +374,7 @@ void DataProcessor::processFile() {
                 totalPE += peValues[i];
             }
             std::cout << "totalPE: " << totalPE << std::endl;
-            if (isCrossingMuon)
-                DrawWaveforms(event_id, rawWaveforms);
+            //if (isCrossingMuon) DrawWaveforms(event_id, rawWaveforms);
         }
     }
     std::cout << "tpTriggered: " << tpTriggered << std::endl;
@@ -613,7 +615,7 @@ void DataProcessor::dailyCheck() {
             histPMTPE[ch_name]->Fill(pe_value);
         }
 
-        DrawWaveforms(event_id, waveforms);
+        //DrawWaveforms(event_id, waveforms);
 
 
         // Fill the histogram for the maximum waveform index based on the summed
