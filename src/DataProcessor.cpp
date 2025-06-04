@@ -182,7 +182,7 @@ void DataProcessor::processFile() {
         trigDataStorage.push_back(std::move(tempArray));
     }
 
-    std::vector<std::string> alphaPMT = {"adc_b4_12"};
+    std::vector<std::string> alphaPMT = {"adc_b4_ch12"};
     for (auto &pmt : alphaPMT) {
         auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
         inputTree->SetBranchStatus(pmt.c_str(), 1);
