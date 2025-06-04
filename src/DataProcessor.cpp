@@ -122,10 +122,7 @@ void DataProcessor::processFile() {
     TFile *inputFile = new TFile(config_.inputFileName.c_str());
     TTree *inputTree = (TTree *)inputFile->Get("daq");
     //
-    // 브랜치 활성화 최적화
     inputTree->SetBranchStatus("*", 0);
-    // TTreeCache 설정 (100MB)
-    //inputTree->SetCacheSize(2LL * 1024 * 1024 * 1024);
 
     UInt_t event_id;
     inputTree->SetBranchStatus("event_id", 1);
@@ -161,6 +158,7 @@ void DataProcessor::processFile() {
     //inputTree->SetBranchAddress("adc_b1_ch0", tempArray);
 
     std::vector<std::unique_ptr<UShort_t[]>> dataStorage;
+    std::vector<std::unique_ptr<UShort_t[]>> alphaPMTStorage;
     std::vector<std::unique_ptr<UShort_t[]>> trigDataStorage;
     std::vector<std::unique_ptr<UShort_t[]>> topPaddleDataStorage;
     std::vector<std::unique_ptr<UShort_t[]>> botPaddleDataStorage;
@@ -182,6 +180,15 @@ void DataProcessor::processFile() {
         inputTree->SetBranchAddress(trig.c_str(), tempArray.get());
         inputTree->AddBranchToCache(trig.c_str());
         trigDataStorage.push_back(std::move(tempArray));
+    }
+
+    std::vector<std::string> alphaPMT = {"adc_b4_12"};
+    for (auto &pmt : alphaPMT) {
+        auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
+        inputTree->SetBranchStatus(pmt.c_str(), 1);
+        inputTree->SetBranchAddress(pmt.c_str(), tempArray.get());
+        inputTree->AddBranchToCache(pmt.c_str());
+        alphaPMTStorage.push_back(std::move(tempArray));
     }
 
     std::vector<std::string> topPaddlePMTs = {"adc_b4_ch13", "adc_b4_ch14"};
@@ -215,6 +222,7 @@ void DataProcessor::processFile() {
         end = 210;
     }
 
+
     int event_number = (config_.eventNumber > inputTree->GetEntries() ?
             inputTree->GetEntries() : config_.eventNumber);
 
@@ -243,6 +251,11 @@ void DataProcessor::processFile() {
             } else {
                 continue;
             }
+        }
+        bool alpha_triggered = false;
+        Waveform alpha(alphaPMTStorage[0].get());
+        if (Waveform::hasValueLessThan(alpha.getSamples(), 3000)) {
+            alpha_triggered = true;
         }
 
         bool isEventOk = true;
@@ -334,8 +347,10 @@ void DataProcessor::processFile() {
             }
             //alpha only
             if (config_.triggerType == 1) {
-                if (maxIndex < start-20 || maxIndex > end+20) {
+                //if (maxIndex < start-20 || maxIndex > end+20) {
+                if (!alpha_triggered) {
                     std::cout << "configured: alpha" << std::endl;
+                    std::cout << "alpha_triggered: " << alpha_triggered << std::endl;
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
@@ -353,14 +368,18 @@ void DataProcessor::processFile() {
                 }
             }
 
+            std::cout << "peak time " << maxIndex << ", window: " << maxIndex - 20 << " ~ " << maxIndex + 40 << std::endl;
             for (size_t i = 0; i < pmts_.size(); ++i) {
                 std::string ch_name = pmts_[i];
                 Waveform wf(dataStorage[i].get());
                 wf.subtractFlatBaseline(0, 100);
                 wf.setAmpPE(spe_mean_[ch_name]);
                 wf.correctDaisyChainTrgDelay(ch_name);
-                double pe_value = wf.getPE(maxIndex - 20, maxIndex + 40);
-                std::cout << "peak time " << maxIndex << ", window: " << maxIndex - 20 << " ~ " << maxIndex + 40 << std::endl;
+                int lowlim = maxIndex - 20;
+                if (lowlim < 0) lowlim = 0;
+                int upperlim = maxIndex + 40;
+                if (upperlim > wf.getSamples().size()) upperlim = wf.getSamples().size();
+                double pe_value = wf.getPE(lowlim, upperlim);
                 peValues.push_back(pe_value);
             }
 
