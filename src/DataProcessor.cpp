@@ -226,7 +226,6 @@ void DataProcessor::processFile() {
     int event_number = (config_.eventNumber > inputTree->GetEntries() ?
             inputTree->GetEntries() : config_.eventNumber);
 
-
     //TH1D* hist_bp1_area = new TH1D("hist_bp1_area", "hist_bp1_area", 100,0,100);
     int tpTriggered = 0;
     int alphaTriggered = 0;
@@ -254,7 +253,7 @@ void DataProcessor::processFile() {
         }
         bool alpha_triggered = false;
         Waveform alpha(alphaPMTStorage[0].get());
-        if (Waveform::hasValueLessThan(alpha.getSamples(), 3000)) {
+        if (Waveform::hasValueLessThan(alpha.getSamples(), 15400)) {
             alpha_triggered = true;
         }
 
@@ -271,8 +270,8 @@ void DataProcessor::processFile() {
             rawWaveforms.push_back(wf);
 
             if (wf.getSamples().size() != config_.sampleSize) {
-                std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
-                std::cout << "configed sample size: " << config_.sampleSize << ", but " << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
+                //std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
+                //std::cout << "configed sample size: " << config_.sampleSize << ", but " << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
                 break;
             }
@@ -302,7 +301,7 @@ void DataProcessor::processFile() {
         //    double tempPE = botPaddleWaveform.getPE(0, sizeof(botPaddleDataStorage[0]) -1);
         //    hist_bp1_area->Fill(tempPE);
         }
-        if (maxIndex > start && maxIndex < end) 
+        if (alpha_triggered) 
             alphaTriggered++;
         if (maxIndex > start && maxIndex < end) 
             majorityTriggered++;
@@ -349,9 +348,9 @@ void DataProcessor::processFile() {
             if (config_.triggerType == 1) {
                 //if (maxIndex < start-20 || maxIndex > end+20) {
                 if (!alpha_triggered) {
-                    std::cout << "configured: alpha" << std::endl;
-                    std::cout << "alpha_triggered: " << alpha_triggered << std::endl;
-                    std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
+                    //std::cout << "configured: alpha" << std::endl;
+                    //std::cout << "alpha_triggered: " << alpha_triggered << std::endl;
+                    //std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
             }
@@ -375,10 +374,13 @@ void DataProcessor::processFile() {
                 wf.subtractFlatBaseline(0, 100);
                 wf.setAmpPE(spe_mean_[ch_name]);
                 wf.correctDaisyChainTrgDelay(ch_name);
+
                 int lowlim = maxIndex - 20;
                 if (lowlim < 0) lowlim = 0;
+
                 int upperlim = maxIndex + 40;
-                if (upperlim > wf.getSamples().size()) upperlim = wf.getSamples().size();
+                if (upperlim > wf.getSamples().size()) upperlim = wf.getSamples().size() - 1;
+
                 double pe_value = wf.getPE(lowlim, upperlim);
                 peValues.push_back(pe_value);
             }
