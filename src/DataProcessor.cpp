@@ -134,8 +134,8 @@ void DataProcessor::processFile() {
     const int MAX_SAMPLE_SIZE = 3000;
     const int ADC_SATURATION_VALUE = 15400;
     const int BASELINE_END_BIN = 100;
-    const int PE_INTEGRATION_PRE_BINS = 20;
-    const int PE_INTEGRATION_POST_BINS = 40;
+    const int PE_INTEGRATION_PRE_BINS = 10;
+    const int PE_INTEGRATION_POST_BINS = 20;
 
     TFile *inputFile = new TFile(config_.inputFileName.c_str());
     TTree *inputTree = (TTree *)inputFile->Get("daq");
@@ -306,7 +306,8 @@ void DataProcessor::processFile() {
             //alpha only
             if (config_.triggerType == 1) {
                 //if (maxIndex < start-PE_INTEGRATION_PRE_BINS || maxIndex > end+20 || !alpha_triggered) {
-                if (maxIndex < 160 || maxIndex > 180 || !alpha_triggered) {
+                //water 240822 ~ 240930
+                if (maxIndex < 70 || maxIndex > 130 || !alpha_triggered) {
                 //if (!alpha_triggered) {
                     //std::cout << "configured: alpha" << std::endl;
                     //std::cout << "alpha_triggered: " << alpha_triggered << std::endl;
@@ -357,6 +358,8 @@ void DataProcessor::processFile() {
                 totalPE += peValues[i];
             }
             std::cout << "totalPE: " << totalPE << std::endl;
+
+            //DrawWaveforms(event_id, processedWaveforms);
             //if (isCrossingMuon) DrawWaveforms(event_id, rawWaveforms);
         }
     }
