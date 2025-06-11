@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include "Waveform.h"
+#include <TTree.h>
 
 class DataProcessor {
 public:
@@ -31,6 +32,9 @@ private:
 
     void setSPEResult(const std::string& calibrationPath);
     void processFile();
+    void setupBranches(TTree* tree, const std::vector<std::string>& branchNames,
+                   std::vector<std::unique_ptr<UShort_t[]>>& storage,
+                   int sampleSize);
 
     std::string extractFileID(const std::string& filePath);
 };
