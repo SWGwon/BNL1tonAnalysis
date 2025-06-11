@@ -10,6 +10,7 @@
 #include <iostream>
 #include <sstream>
 
+
 DataProcessor::DataProcessor(const AppConfig &config) : config_(config) {
     pmts30t = {"adc_b1_ch0",  "adc_b1_ch1",  "adc_b1_ch2",  "adc_b1_ch3",
                "adc_b1_ch4",  "adc_b1_ch5",  "adc_b1_ch6",  "adc_b1_ch7",
@@ -117,8 +118,25 @@ UShort_t GetMin(UShort_t *arr, Int_t n) {
     return min;
 }
 
+void DataProcessor::setupBranches(TTree* tree, const std::vector<std::string>& branchNames,
+                   std::vector<std::unique_ptr<UShort_t[]>>& storage,
+                   int sampleSize) {
+    for (const auto& name : branchNames) {
+        auto tempArray = std::make_unique<UShort_t[]>(sampleSize);
+        tree->SetBranchStatus(name.c_str(), 1);
+        tree->SetBranchAddress(name.c_str(), tempArray.get());
+        tree->AddBranchToCache(name.c_str());
+        storage.push_back(std::move(tempArray));
+    }
+}
+
 void DataProcessor::processFile() {
     const int MAX_SAMPLE_SIZE = 3000;
+    const int ADC_SATURATION_VALUE = 15400;
+    const int BASELINE_END_BIN = 100;
+    const int PE_INTEGRATION_PRE_BINS = 20;
+    const int PE_INTEGRATION_POST_BINS = 40;
+
     TFile *inputFile = new TFile(config_.inputFileName.c_str());
     TTree *inputTree = (TTree *)inputFile->Get("daq");
     //
@@ -128,30 +146,6 @@ void DataProcessor::processFile() {
     inputTree->SetBranchStatus("event_id", 1);
     inputTree->SetBranchAddress("event_id", &event_id);
     inputTree->AddBranchToCache("event_id");
-
-    //std::vector<UShort_t *> dataStorage;
-    //std::vector<UShort_t *> trigDataStorage;
-    //std::vector<UShort_t *> botPaddleDataStorage;
-    //std::vector<UShort_t *> topPaddleDataStorage;
-
-    //for (auto &pmt : pmts_) {
-    //    UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
-    //    dataStorage.push_back(tempArray);
-    //    inputTree->SetBranchAddress(pmt.c_str(), tempArray);
-    //}
-
-    //for (auto &trig : triggers_) {
-    //    UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
-    //    trigDataStorage.push_back(tempArray);
-    //    inputTree->SetBranchAddress(trig.c_str(), tempArray);
-    //}
-
-    //std::vector<std::string> topPaddlePMTs = {"adc_b4_ch13", "adc_b4_ch14"};
-    //for (auto &tp : topPaddlePMTs) {
-    //    UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
-    //    topPaddleDataStorage.push_back(tempArray);
-    //    inputTree->SetBranchAddress(tp.c_str(), tempArray);
-    //}
 
     //UShort_t *tempArray = new UShort_t[MAX_SAMPLE_SIZE]();
     //botPaddleDataStorage.push_back(tempArray);
@@ -163,49 +157,16 @@ void DataProcessor::processFile() {
     std::vector<std::unique_ptr<UShort_t[]>> topPaddleDataStorage;
     std::vector<std::unique_ptr<UShort_t[]>> botPaddleDataStorage;
 
-    for (auto &pmt : pmts_) {
-        // 스마트 포인터 생성: UShort_t 배열 할당
-        auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
-        // SetBranchAddress에 내부 포인터 전달
-        inputTree->SetBranchStatus(pmt.c_str(), 1);
-        inputTree->AddBranchToCache(pmt.c_str());
-        inputTree->SetBranchAddress(pmt.c_str(), tempArray.get());
-        // 소유권 이전
-        dataStorage.push_back(std::move(tempArray));
-    }
-
-    for (auto &trig : triggers_) {
-        auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
-        inputTree->SetBranchStatus(trig.c_str(), 1);
-        inputTree->SetBranchAddress(trig.c_str(), tempArray.get());
-        inputTree->AddBranchToCache(trig.c_str());
-        trigDataStorage.push_back(std::move(tempArray));
-    }
+    setupBranches(inputTree, pmts_, dataStorage, MAX_SAMPLE_SIZE);
+    setupBranches(inputTree, triggers_, trigDataStorage, MAX_SAMPLE_SIZE);
 
     std::vector<std::string> alphaPMT = {"adc_b4_ch12"};
-    for (auto &pmt : alphaPMT) {
-        auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
-        inputTree->SetBranchStatus(pmt.c_str(), 1);
-        inputTree->SetBranchAddress(pmt.c_str(), tempArray.get());
-        inputTree->AddBranchToCache(pmt.c_str());
-        alphaPMTStorage.push_back(std::move(tempArray));
-    }
+    setupBranches(inputTree, alphaPMT, alphaPMTStorage, MAX_SAMPLE_SIZE);
 
     std::vector<std::string> topPaddlePMTs = {"adc_b4_ch13", "adc_b4_ch14"};
-    for (auto &tp : topPaddlePMTs) {
-        auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
-        inputTree->SetBranchStatus(tp.c_str(), 1);
-        inputTree->SetBranchAddress(tp.c_str(), tempArray.get());
-        inputTree->AddBranchToCache(tp.c_str());
-        topPaddleDataStorage.push_back(std::move(tempArray));
-    }
+    setupBranches(inputTree, topPaddlePMTs, topPaddleDataStorage, MAX_SAMPLE_SIZE);
 
-    auto tempArray = std::make_unique<UShort_t[]>(MAX_SAMPLE_SIZE);
-    inputTree->SetBranchStatus("adc_b1_ch0", 1);
-    inputTree->SetBranchAddress("adc_b1_ch0", tempArray.get());
-    inputTree->AddBranchToCache("adc_b1_ch0");
-    botPaddleDataStorage.push_back(std::move(tempArray));
-
+    setupBranches(inputTree, {"adc_b1_ch0"}, botPaddleDataStorage, MAX_SAMPLE_SIZE);
 
     int start = 0, end = 0;
     if (config_.triggerType == 0 || config_.triggerType == 3) {
@@ -221,7 +182,6 @@ void DataProcessor::processFile() {
         start = 150;
         end = 210;
     }
-
 
     int event_number = (config_.eventNumber > inputTree->GetEntries() ?
             inputTree->GetEntries() : config_.eventNumber);
@@ -242,9 +202,9 @@ void DataProcessor::processFile() {
             Waveform botPaddleWaveform(botPaddleDataStorage[0].get());
             Waveform tp1(topPaddleDataStorage[0].get());
             Waveform tp2(topPaddleDataStorage[1].get());
-            if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400) &&
-                    Waveform::hasValueLessThan(tp1.getSamples(), 15400) &&
-                    Waveform::hasValueLessThan(tp2.getSamples(), 15400)) {
+            if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), ADC_SATURATION_VALUE) &&
+                    Waveform::hasValueLessThan(tp1.getSamples(), ADC_SATURATION_VALUE) &&
+                    Waveform::hasValueLessThan(tp2.getSamples(), ADC_SATURATION_VALUE)) {
                 std::cout << "crossing muon event: " << event_id << std::endl;
                 isCrossingMuon = true;
             } else {
@@ -253,12 +213,12 @@ void DataProcessor::processFile() {
         }
         bool alpha_triggered = false;
         Waveform alpha(alphaPMTStorage[0].get());
-        if (Waveform::hasValueLessThan(alpha.getSamples(), 15400)) {
+        if (Waveform::hasValueLessThan(alpha.getSamples(), ADC_SATURATION_VALUE)) {
             alpha_triggered = true;
         }
 
         bool isEventOk = true;
-        std::vector<std::vector<double>> processedWaveforms;
+        std::vector<Waveform> processedWaveforms;
         std::vector<Waveform> rawWaveforms;
         processedWaveforms.reserve(pmts_.size());
         std::vector<double> peValues;
@@ -275,20 +235,18 @@ void DataProcessor::processFile() {
                 isEventOk = false;
                 break;
             }
-            wf.subtractFlatBaseline(0, 100);
+            wf.subtractFlatBaseline(0, BASELINE_END_BIN);
             wf.setAmpPE(spe_mean_[ch_name]);
             wf.correctDaisyChainTrgDelay(ch_name);
-            //double pe_value = wf.getPE(start, end);
-            //peValues.push_back(pe_value);
-            processedWaveforms.push_back(wf.getSamples());
+            processedWaveforms.push_back(wf);
         }
         if (!isEventOk)
             continue;
 
-        std::vector<double> summedWaveform(processedWaveforms[0].size(), 0);
-        for (size_t i = 0; i < processedWaveforms[0].size(); ++i) {
+        std::vector<double> summedWaveform(processedWaveforms[0].getSamples().size(), 0);
+        for (size_t i = 0; i < processedWaveforms[0].getSamples().size(); ++i) {
             for (const auto &wf : processedWaveforms) {
-                summedWaveform[i] += wf[i];
+                summedWaveform[i] += wf.getSamples()[i];
             }
         }
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
@@ -309,7 +267,8 @@ void DataProcessor::processFile() {
         //Waveform botPaddleWaveform(botPaddleDataStorage[0]);
         //Waveform tp(trigDataStorage[0]);
         //Waveform majority(trigDataStorage[2]);
-        //if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(), 15400) &&
+        //if (Waveform::hasValueLessThan(botPaddleWaveform.getSamples(),
+        //ADC_SATURATION_VALUE) &&
         //        Waveform::hasValueLessThan(tp.getSamples(), 3000) && Waveform::hasValueLessThan(majority.getSamples(),3000)) {
         //    TCanvas c;
         //    c.Divide(3,3);
@@ -326,7 +285,7 @@ void DataProcessor::processFile() {
         //        c.cd(iii);
         //        std::string ch_name = pmts_[iii];
         //        Waveform wf(dataStorage[iii]);
-        //        wf.subtractFlatBaseline(0, 100);
+        //        wf.subtractFlatBaseline(0, BASELINE_END_BIN);
         //        wf.setAmpPE(spe_mean_[ch_name]);
         //        wf.correctDaisyChainTrgDelay(ch_name);
         //        gr = wf.drawMVAsGraph(ch_name.c_str());
@@ -338,7 +297,7 @@ void DataProcessor::processFile() {
         if (config_.triggerType != -1) {
             //tp only
             if (config_.triggerType == 0) {
-                if (maxIndex < start-20 || maxIndex > end+20) {
+                if (maxIndex < start-PE_INTEGRATION_PRE_BINS || maxIndex > end+20) {
                     std::cout << "configured: top paddle" << std::endl;
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
@@ -346,8 +305,9 @@ void DataProcessor::processFile() {
             }
             //alpha only
             if (config_.triggerType == 1) {
-                //if (maxIndex < start-20 || maxIndex > end+20) {
-                if (!alpha_triggered) {
+                //if (maxIndex < start-PE_INTEGRATION_PRE_BINS || maxIndex > end+20 || !alpha_triggered) {
+                if (maxIndex < 160 || maxIndex > 180 || !alpha_triggered) {
+                //if (!alpha_triggered) {
                     //std::cout << "configured: alpha" << std::endl;
                     //std::cout << "alpha_triggered: " << alpha_triggered << std::endl;
                     //std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
@@ -360,25 +320,22 @@ void DataProcessor::processFile() {
                 //if (!Waveform::hasValueLessThan(majority.getSamples(),3000)) {
                 //    continue;
                 //}
-                if (maxIndex < start-20 || maxIndex > end+20) {
+                if (maxIndex < start-PE_INTEGRATION_PRE_BINS || maxIndex > end+20) {
                     std::cout << "configured: majority" << std::endl;
                     std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
                     continue;
                 }
             }
 
-            std::cout << "peak time " << maxIndex << ", window: " << maxIndex - 20 << " ~ " << maxIndex + 40 << std::endl;
+            //getting PE
+            std::cout << "peak time " << maxIndex << ", window: " << maxIndex - PE_INTEGRATION_PRE_BINS << " ~ " << maxIndex + PE_INTEGRATION_POST_BINS << std::endl;
             for (size_t i = 0; i < pmts_.size(); ++i) {
-                std::string ch_name = pmts_[i];
-                Waveform wf(dataStorage[i].get());
-                wf.subtractFlatBaseline(0, 100);
-                wf.setAmpPE(spe_mean_[ch_name]);
-                wf.correctDaisyChainTrgDelay(ch_name);
+                Waveform wf = processedWaveforms.at(i);
 
-                int lowlim = maxIndex - 20;
+                int lowlim = maxIndex - PE_INTEGRATION_PRE_BINS;
                 if (lowlim < 0) lowlim = 0;
 
-                int upperlim = maxIndex + 40;
+                int upperlim = maxIndex + PE_INTEGRATION_POST_BINS;
                 if (upperlim > wf.getSamples().size()) upperlim = wf.getSamples().size() - 1;
 
                 double pe_value = wf.getPE(lowlim, upperlim);
@@ -519,7 +476,8 @@ void DataProcessor::DrawWaveforms(int event_id, std::vector<Waveform> waveforms)
     for (int i = 0; i < size; ++i) {
          can.cd(i + 1);
          TGraph* gr = waveforms[i].drawMVAsGraph(waveforms[i].getName());
-         gr->Draw();
+         gr->SetLineWidth(1);
+         gr->Draw("AL");
     }
     can.SaveAs(Form("waveforms_%d.pdf", event_id));
 }
