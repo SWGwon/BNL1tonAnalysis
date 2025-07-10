@@ -194,7 +194,7 @@ std::vector<double> Waveform::getAmpMV(const std::string & /*ch_name*/) const {
             std::cerr << "Debug (Waveform::getAmpMV): Input samples_[" << index << "] (value: " << raw_sample << ") is NaN before scaling." << std::endl;
         }
 
-        double scaled_value = sample * scale;
+        double scaled_value = sample * scale / 50.;
 
         if (std::isnan(scaled_value)) {
             std::cerr << "Debug (Waveform::getAmpMV): Calculated 'scaled_value' is NaN at index " << index << "." << std::endl;
@@ -221,7 +221,7 @@ std::vector<double> Waveform::getAmpMV(const std::string & /*ch_name*/) const {
 //        amp_pe_.push_back(temp);
 //    }
 //}
-void Waveform::setAmpPE(double spe_mean, double factor) {
+void Waveform::setAmpPE(double spe_mean) {
     std::vector<double> ampMV = getAmpMV(); // ampMV가 double 값을 가진 vector라고 가정
     amp_pe_.clear();
     amp_pe_.reserve(ampMV.size());
@@ -229,13 +229,6 @@ void Waveform::setAmpPE(double spe_mean, double factor) {
     // 함수 인자 자체의 NaN 검사 (선택 사항이지만 디버깅에 유용)
     if (std::isnan(spe_mean)) {
         std::cerr << "Debug (Waveform::setAmpPE): Input 'spe_mean' is NaN." << std::endl;
-    }
-    if (std::isnan(factor)) {
-        std::cerr << "Debug (Waveform::setAmpPE): Input 'factor' is NaN." << std::endl;
-    }
-    // factor 또는 spe_mean이 0인 경우도 나누기 오류를 유발할 수 있으므로 필요시 로그 추가 가능
-    if (factor == 0.0) {
-        std::cerr << "Debug (Waveform::setAmpPE): Input 'factor' is zero, division by zero may occur." << std::endl;
     }
     if (spe_mean == 0.0) {
         std::cerr << "Debug (Waveform::setAmpPE): Input 'spe_mean' is zero, division by zero may occur." << std::endl;
@@ -249,7 +242,7 @@ void Waveform::setAmpPE(double spe_mean, double factor) {
             std::cerr << "Debug (Waveform::setAmpPE): ampMV[" << index << "] (value) is NaN before calculation." << std::endl;
         }
 
-        double temp = value / factor / spe_mean;
+        double temp = value / spe_mean;
 
         if (std::isnan(temp)) {
             std::cerr << "Debug (Waveform::setAmpPE): Calculated 'temp' is NaN at index " << index << "." << std::endl;
@@ -257,7 +250,6 @@ void Waveform::setAmpPE(double spe_mean, double factor) {
             std::cerr << "    value from ampMV (ampMV[" << index << "]) = " << value << std::endl;
             std::cerr << "    Function arguments:" << std::endl;
             std::cerr << "      spe_mean = " << spe_mean << std::endl;
-            std::cerr << "      factor = " << factor << std::endl;
             std::cerr << "    Resulting temp = " << temp << " (is NaN)" << std::endl;
         }
         amp_pe_.push_back(temp);

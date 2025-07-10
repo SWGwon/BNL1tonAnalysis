@@ -33,13 +33,13 @@ public:
     void subtractFlatBaseline(int start = 0, int end = 100);
 
     // Converts the current waveform samples to mV units.
-    // Conversion formula: mV = sample * (2000 / (2^14 - 1))
+    // Conversion formula: mV = sample * (2000 / (2^14 - 1)) / 50
     std::vector<double> getAmpMV(const std::string& /*ch_name*/ = "") const;
 
     // Converts the waveform from mV units to photoelectron (PE) units
     // using spe_mean (Single Photon Response) correction.
     // Calculation formula: amp_pe = amp_mV / factor / spe_mean (default factor = 50)
-    void setAmpPE(double spe_mean, double factor = 50.0);
+    void setAmpPE(double spe_mean);
 
     // Integrates a specific range (integrateStart ~ integrateEnd, inclusive) of the PE waveform (amp_pe_).
     // Each sample is multiplied by sampleToNS (default 2) before returning the result.
