@@ -212,10 +212,18 @@ void DataProcessor::processFile() {
             }
         }
         bool alpha_triggered = false;
-        Waveform alpha(alphaPMTStorage[0].get());
-        if (Waveform::hasValueLessThan(alpha.getSamples(), ADC_SATURATION_VALUE)) {
-            alpha_triggered = true;
+        if (config_.triggerType == 1) {
+            Waveform alpha(alphaPMTStorage[0].get());
+            alpha.subtractFlatBaseline(0, BASELINE_END_BIN);
+            if (alpha.hasPeakAboveThreshold(16./50.)) {
+                alpha_triggered = true;
+            }
+            //if (Waveform::hasValueLessThan(alpha.getSamples(), ADC_SATURATION_VALUE)) {
+            //    alpha_triggered = true;
+            //}
         }
+        if (alpha_triggered) 
+            alphaTriggered++;
 
         bool isEventOk = true;
         std::vector<Waveform> processedWaveforms;
@@ -230,8 +238,8 @@ void DataProcessor::processFile() {
             rawWaveforms.push_back(wf);
 
             if (wf.getSamples().size() != config_.sampleSize) {
-                //std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
-                //std::cout << "configed sample size: " << config_.sampleSize << ", but " << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
+                std::cout << "event " << event_id << " is not good, skipping this event" << std::endl;
+                std::cout << "configed sample size: " << config_.sampleSize << ", but " << ch_name << " sample size: " << wf.getSamples().size() << std::endl;
                 isEventOk = false;
                 break;
             }
@@ -251,18 +259,16 @@ void DataProcessor::processFile() {
         }
         auto maxIt = std::max_element(summedWaveform.begin(), summedWaveform.end());
         int maxIndex = std::distance(summedWaveform.begin(), maxIt);
-        if (maxIndex > start && maxIndex < end) {
-            tpTriggered++;
+        //if (maxIndex > start && maxIndex < end) {
+        //    tpTriggered++;
         //    Waveform botPaddleWaveform(botPaddleDataStorage[0]);
         //    botPaddleWaveform.subtractFlatBaseline(0, sizeof(botPaddleDataStorage[0]) -1);
         //    botPaddleWaveform.setAmpPE(1.0,1.0);
         //    double tempPE = botPaddleWaveform.getPE(0, sizeof(botPaddleDataStorage[0]) -1);
         //    hist_bp1_area->Fill(tempPE);
-        }
-        if (alpha_triggered) 
-            alphaTriggered++;
-        if (maxIndex > start && maxIndex < end) 
-            majorityTriggered++;
+        //}
+        //if (maxIndex > start && maxIndex < end) 
+        //    majorityTriggered++;
 
         //Waveform botPaddleWaveform(botPaddleDataStorage[0]);
         //Waveform tp(trigDataStorage[0]);
@@ -307,8 +313,8 @@ void DataProcessor::processFile() {
             if (config_.triggerType == 1) {
                 //if (maxIndex < start-PE_INTEGRATION_PRE_BINS || maxIndex > end+20 || !alpha_triggered) {
                 //water 240822 ~ 240930
-                if (maxIndex < 70 || maxIndex > 130 || !alpha_triggered) {
-                //if (!alpha_triggered) {
+                //if (maxIndex < 70 || maxIndex > 130 || !alpha_triggered) {
+                if (!alpha_triggered) {
                     //std::cout << "configured: alpha" << std::endl;
                     //std::cout << "alpha_triggered: " << alpha_triggered << std::endl;
                     //std::cout << "peak time " << maxIndex << " doesn't match to trigger" << std::endl;
@@ -339,7 +345,11 @@ void DataProcessor::processFile() {
                 int upperlim = maxIndex + PE_INTEGRATION_POST_BINS;
                 if (upperlim > wf.getSamples().size()) upperlim = wf.getSamples().size() - 1;
 
-                double pe_value = wf.getPE(lowlim, upperlim);
+                double pe_value;
+                if (config_.triggerType != 1)
+                    pe_value = wf.getPE(lowlim, upperlim);
+                else
+                    pe_value = wf.getPE(310, 350);
                 peValues.push_back(pe_value);
             }
 
@@ -418,7 +428,6 @@ void DataProcessor::saveRootOutput() {
     // Create a vector to hold the output PE values for each PMT.
     // Using a std::vector is preferred over a variable-length array.
     std::vector<double> outputPE(pmts_.size(), 0.0);
-
     // Create a branch for each PMT.
     int branchIndex = 0;
     for (const auto &pmt : pmts_) {
@@ -426,6 +435,8 @@ void DataProcessor::saveRootOutput() {
         outputTree->Branch(pmt.c_str(), &outputPE[branchIndex]);
         branchIndex++;
     }
+    double totalPE = 0;
+    outputTree->Branch("totalPE", &totalPE);
 
     // Check that we have at least one PMT.
     if (pmts_.empty()) {
@@ -440,6 +451,7 @@ void DataProcessor::saveRootOutput() {
 
     // Loop over all events.
     for (size_t ievt = 0; ievt < numEvents; ++ievt) {
+        totalPE = 0.0;
         branchIndex = 0;
         // Loop over all PMTs to fill the output array.
         for (const auto &pmt : pmts_) {
@@ -450,6 +462,7 @@ void DataProcessor::saveRootOutput() {
                 // In case of missing data, set a default value.
                 outputPE[branchIndex] = 0.0;
             }
+            totalPE += outputPE[branchIndex];
             branchIndex++;
         }
         // Fill the tree with the event's data.

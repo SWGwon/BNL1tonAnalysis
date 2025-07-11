@@ -61,6 +61,7 @@ public:
 
     void setName(std::string ch_name) {this->ch_name_ = ch_name;};
     std::string getName() {return this->ch_name_;};
+    bool hasPeakAboveThreshold(double threshold);
 
 private:
     std::string ch_name_;

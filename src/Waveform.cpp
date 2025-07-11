@@ -209,6 +209,20 @@ std::vector<double> Waveform::getAmpMV(const std::string & /*ch_name*/) const {
     return ampMV;
 }
 
+bool Waveform::hasPeakAboveThreshold(double threshold) {
+    std::vector<double> ampMV = getAmpMV(); // ampMV가 double 값을 가진 vector라고 가정
+    // If the vector is empty, there is no peak.
+    if (ampMV.empty()) {
+        return false;
+    }
+    double maxValue = *std::max_element(ampMV.begin(), ampMV.end());
+
+    // Print the found maximum value.
+    //std::cout << "Maximum peak value found: " << maxValue << " mV." << std::endl;
+
+    return maxValue > threshold;
+}
+
 // Converts mV data to PE units.
 // Conversion formula: amp_pe = amp_mV / factor / spe_mean
 // factor: 50 ohm
