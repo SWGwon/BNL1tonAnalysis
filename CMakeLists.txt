@@ -32,6 +32,11 @@ add_executable(ProcessRawRoot src/ProcessRawRoot.cpp src/Waveform.cpp
 target_include_directories(ProcessRawRoot PUBLIC ${ROOT_INCLUDE_DIRS})
 target_link_libraries(ProcessRawRoot PUBLIC ROOT::RIO ROOT::Net ROOT::Hist ROOT::Tree ROOT::TreePlayer ROOT::MathCore ROOT::Thread Threads::Threads)
 
+add_executable(Process1tonData src/Process1tonData.cpp src/Waveform.cpp
+    src/DataProcessor1ton.cpp src/AppConfig.cpp)
+target_include_directories(Process1tonData PUBLIC ${ROOT_INCLUDE_DIRS})
+target_link_libraries(Process1tonData PUBLIC ROOT::RIO ROOT::Net ROOT::Hist ROOT::Tree ROOT::TreePlayer ROOT::MathCore ROOT::Thread Threads::Threads)
+
 add_executable(DailyCheck src/DailyCheck.cpp src/Waveform.cpp
     src/DataProcessor.cpp src/AppConfig.cpp)
 target_include_directories(DailyCheck PUBLIC ${ROOT_INCLUDE_DIRS})

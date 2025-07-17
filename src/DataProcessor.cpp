@@ -338,6 +338,7 @@ void DataProcessor::processFile() {
             std::cout << "peak time " << maxIndex << ", window: " << maxIndex - PE_INTEGRATION_PRE_BINS << " ~ " << maxIndex + PE_INTEGRATION_POST_BINS << std::endl;
             for (size_t i = 0; i < pmts_.size(); ++i) {
                 Waveform wf = processedWaveforms.at(i);
+                std::string ch_name = pmts_[i];
 
                 int lowlim = maxIndex - PE_INTEGRATION_PRE_BINS;
                 if (lowlim < 0) lowlim = 0;
@@ -347,9 +348,9 @@ void DataProcessor::processFile() {
 
                 double pe_value;
                 if (config_.triggerType != 1)
-                    pe_value = wf.getPE(lowlim, upperlim);
+                    pe_value = wf.getPE(lowlim, upperlim, spe_mean_[ch_name]);
                 else
-                    pe_value = wf.getPE(310, 350);
+                    pe_value = wf.getPE(310, 350, spe_mean_[ch_name]);
                 peValues.push_back(pe_value);
             }
 
@@ -609,7 +610,7 @@ void DataProcessor::dailyCheck() {
                 continue;
 
             // Calculate PE value for the channel and fill its histogram
-            double pe_value = wf.getPE(0, wf.getAmpPE().size() - 1);
+            double pe_value = wf.getPE(0, wf.getAmpPE().size() - 1, spe_mean_[ch_name]);
             pe_[ch_name].push_back(pe_value);
             schn[i] = pe_value;
             histPMTPE[ch_name]->Fill(pe_value);
@@ -910,6 +911,7 @@ void DataProcessor::dailyCheck30t() {
         bool isEventOk = true;
         for (size_t i = 0; i < pmts30t.size(); ++i) {
             std::string ch_name = pmts30t[i];
+            double spe_mean = 1.0;
             Waveform wf(dataStorage[i]);
             //if (wf.getSamples().size() != 2000) {
             if (wf.getSamples().size() != config_.sampleSize) {
@@ -919,7 +921,7 @@ void DataProcessor::dailyCheck30t() {
                 break;
             }
             wf.subtractFlatBaseline(0, 100);
-            wf.setAmpPE(1.0); //spe_mean, factor = 1.0,1.0
+            wf.setAmpPE(spe_mean); //spe_mean, factor = 1.0,1.0
             wf.correctDaisyChainTrgDelay(ch_name);
 
             // Sum waveforms: use the first channel as the base and add subsequent channels
@@ -987,6 +989,7 @@ void DataProcessor::dailyCheck30t() {
             wf.subtractFlatBaseline(0, 100);
             wf.setAmpPE(1.0); //spe_mean, factor = 1.0,1.0
             wf.correctDaisyChainTrgDelay(ch_name);
+            double spe_mean = 1;
 
             // Set integration range (here using entire sample length)
             int start = maxIndex - 20;
@@ -994,9 +997,9 @@ void DataProcessor::dailyCheck30t() {
             double pe_value = 0;
             double mV_value = 0;
             if (ch_name == "adc_b1_ch9") {
-                pe_value = wf.getPE(start, wf.getAmpPE().size() - 1);
+                pe_value = wf.getPE(start, wf.getAmpPE().size() - 1, spe_mean);
             } else {
-                pe_value = wf.getPE(start, end);
+                pe_value = wf.getPE(start, end, spe_mean);
             }
             pe_[ch_name].push_back(pe_value);
             histPMTPE[ch_name]->Fill(pe_value);
