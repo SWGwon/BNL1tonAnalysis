@@ -53,6 +53,7 @@ void DataProcessor1ton::processFile() {
         ? config_.eventNumber
         : inputTree->GetEntries();
 
+
     int start = 0, end = 0;
     if (config_.triggerType == 0 || config_.triggerType == 3) {
         start = 380;
@@ -98,8 +99,8 @@ void DataProcessor1ton::processFile() {
         }
         double totalPE = std::accumulate(peValues.begin(), peValues.end(), 0.0);
         std::cout << "Event " << event_id << " processed. Peak time: " << peakTime << ", Total PE: " << totalPE << std::endl;
-        inputFile->Close();
     }
+    inputFile->Close();
 }
 
 void DataProcessor1ton::saveRootOutput() {
@@ -234,7 +235,6 @@ void DataProcessor1ton::setupBranches(TTree* tree, const std::vector<std::string
 
 PMTData1ton DataProcessor1ton::setupAllBranches(TTree* tree) {
     PMTData1ton pmtData;
-    tree->SetBranchStatus("*", 0);
 
     setupBranches(tree, pmts_, pmtData.pmts, MAX_SAMPLE_SIZE);
     setupBranches(tree, triggers_, pmtData.triggers, MAX_SAMPLE_SIZE);
