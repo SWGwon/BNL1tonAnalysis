@@ -12,6 +12,8 @@
 #include <iostream>
 #include <sstream>
 
+//TH1D* temp_hodoscope_charge;
+
 namespace {
     constexpr int MAX_SAMPLE_SIZE = 3000;
     constexpr int ADC_SATURATION_VALUE = 15400;
@@ -28,9 +30,15 @@ DataProcessor1ton::DataProcessor1ton(const AppConfig &config) : config_(config) 
 }
 
 void DataProcessor1ton::run() {
+    //temp_hodoscope_charge = new TH1D("temp_hodoscope_charge", "temp_hodoscope_charge", 200, 0,1);
     setSPEResult(config_.inputSPECalibrationPath);
     processFile();
     saveRootOutput();
+
+    //TCanvas* c = new TCanvas();
+    //temp_hodoscope_charge->Draw();
+    //c->SetLogy();
+    //c->SaveAs("temp_hodoscope_charge.pdf");
 }
 
 void DataProcessor1ton::processFile() {
@@ -242,6 +250,9 @@ PMTData1ton DataProcessor1ton::setupAllBranches(TTree* tree) {
     setupBranches(tree, {"adc_b4_ch13", "adc_b4_ch14"}, pmtData.topPaddles, MAX_SAMPLE_SIZE);
     setupBranches(tree, {"adc_b1_ch0"}, pmtData.botPaddle, MAX_SAMPLE_SIZE);
 
+    std::vector<std::string> hodoscope = {"adc_b5_ch1","adc_b5_ch2","adc_b5_ch3","adc_b5_ch4","adc_b5_ch5","adc_b5_ch6","adc_b5_ch7","adc_b5_ch8","adc_b5_ch9","adc_b5_ch10","adc_b5_ch11","adc_b5_ch12","adc_b5_ch13","adc_b5_ch14","adc_b5_ch15","adc_b5_ch16","adc_b5_ch17","adc_b5_ch18","adc_b5_ch19","adc_b5_ch20","adc_b5_ch21","adc_b5_ch22","adc_b5_ch23","adc_b5_ch24","adc_b5_ch25","adc_b5_ch26","adc_b5_ch27","adc_b5_ch28","adc_b5_ch29","adc_b5_ch30","adc_b5_ch31","adc_b5_ch32"};
+    setupBranches(tree, hodoscope, pmtData.hodoscopes, MAX_SAMPLE_SIZE);
+
     return pmtData;
 }
 
@@ -268,6 +279,28 @@ event_id) {
         if (!alpha.hasPeakAboveThreshold(ALPHA_PEAK_THRESHOLD_MV)) {
             return result;
         }
+    }
+
+    if (config_.triggerType == -1) {
+        Waveform top_top_hodoscope(pmtData.hodoscopes[2].get());
+        top_top_hodoscope.subtractFlatBaseline(0,top_top_hodoscope.getSamples().size() - 1);
+        double top_top_charge = top_top_hodoscope.getCharge(0,top_top_hodoscope.getSamples().size() - 1);
+
+        Waveform top_bot_hodoscope(pmtData.hodoscopes[15].get());
+        top_bot_hodoscope.subtractFlatBaseline(0,top_bot_hodoscope.getSamples().size() - 1);
+        double top_bot_charge = top_bot_hodoscope.getCharge(0,top_bot_hodoscope.getSamples().size() - 1);
+
+        Waveform bot_top_hodoscope(pmtData.hodoscopes[17].get());
+        bot_top_hodoscope.subtractFlatBaseline(0,bot_top_hodoscope.getSamples().size() - 1);
+        double bot_top_charge = bot_top_hodoscope.getCharge(0,bot_top_hodoscope.getSamples().size() - 1);
+
+        Waveform bot_bot_hodoscope(pmtData.hodoscopes[28].get());
+        bot_bot_hodoscope.subtractFlatBaseline(0,bot_bot_hodoscope.getSamples().size() - 1);
+        double bot_bot_charge = bot_bot_hodoscope.getCharge(0,bot_bot_hodoscope.getSamples().size() - 1);
+        if (top_top_charge < 0.2 || top_bot_charge < 0.2 || bot_top_charge < 0.2 || bot_bot_charge < 0.2)
+            return result;
+        else
+            std::cout << "hodoscope event " << event_id << " selected" << std::endl;
     }
 
     result.isSelected = true;
