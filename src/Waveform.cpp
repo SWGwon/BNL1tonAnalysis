@@ -22,12 +22,7 @@ Waveform::Waveform(const std::vector<double> &samples) : samples_(samples) {}
 const std::vector<double> &Waveform::getSamples() const { return samples_; }
 
 // Getter: Returns the PE-corrected waveform.
-const std::vector<double> &Waveform::getAmpPE() const {
-    if (!isAmpPeUpToDate_) {
-        std::cerr << "Warning (Waveform::getAmpPE): PE waveform cache is not up-to-date. Call setAmpPE() to calculate it." << std::endl;
-    }
-    return amp_pe_;
-}
+const std::vector<double> &Waveform::getAmpPE() const { return amp_pe_; }
 
 void Waveform::setAmpPE(double spe_mean) {
     // getAmpMV() ensures that amp_mv_ is calculated and up-to-date
@@ -46,7 +41,6 @@ void Waveform::setAmpPE(double spe_mean) {
     }
     
     // Mark the PE cache as up-to-date and store the spe_mean value used.
-    isAmpPeUpToDate_ = true;
     cached_spe_mean_ = spe_mean;
 }
 
@@ -154,15 +148,10 @@ void Waveform::subtractFlatBaseline(int start, int end) {
         index++;
     }
     this->isBaselineSubstracted_ = true;
-    isAmpMvUpToDate_ = false;
-    isAmpPeUpToDate_ = false;
 }
 
 const std::vector<double>& Waveform::getAmpMV() const {
-    // 데이터가 최신이 아니면 다시 계산
-    if (!isAmpMvUpToDate_) {
-        // --- 이 부분이 예전 setAmpMV의 역할 ---
-        amp_mv_.clear();
+    if (amp_mv_.size() == 0) {
         if (!samples_.empty()) {
             amp_mv_.reserve(samples_.size());
             const double scale = 2000.0 / (std::pow(2, 14) - 1.0);
@@ -170,8 +159,6 @@ const std::vector<double>& Waveform::getAmpMV() const {
                 amp_mv_.push_back(sample * scale / 50.0);
             }
         }
-        // ------------------------------------
-        isAmpMvUpToDate_ = true; // 계산했으므로 최신 상태로 플래그 변경
     }
     return this->amp_mv_;
 }
@@ -239,7 +226,7 @@ void Waveform::correctDaisyChainTrgDelay(const std::string &ch_name, int dt_ns,
     // 벡터를 슬라이싱하는 람다 함수
     auto slice_vector = [&](std::vector<double>& vec) {
         if (vec.size() <= static_cast<size_t>(start_offset + end_offset)) {
-            std::cerr << "Not enough samples for correction for " << ch_name << std::endl;
+            std::cerr << "Not enough samples for correction for " << ch_name << ", size: " << vec.size() << std::endl;
             vec.clear(); // 에러 발생 시 벡터를 비움
             return;
         }
@@ -250,8 +237,6 @@ void Waveform::correctDaisyChainTrgDelay(const std::string &ch_name, int dt_ns,
 
     slice_vector(amp_pe_);
     slice_vector(samples_);
-    isAmpMvUpToDate_ = false;
-    isAmpPeUpToDate_ = false;
 
     /*
     if (amp_pe_.empty()) {

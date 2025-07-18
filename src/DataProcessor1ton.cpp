@@ -88,9 +88,9 @@ void DataProcessor1ton::processFile() {
         const int peakTime = findPeakTime(processedWaveforms);
         if (peakTime < 0) continue;
 
-        if (peakTime < start || peakTime > start + 40) {
-            continue;
-        }
+        //if (peakTime < start || peakTime > start + 40) {
+        //    continue;
+        //}
 
         auto peValues = calculatePEs(processedWaveforms, peakTime);
 

@@ -502,6 +502,7 @@ void DataProcessor::DrawWaveforms(int event_id, std::vector<Waveform> waveforms)
 void DataProcessor::dailyCheck() {
     // Initialize file, tree, and histograms
     std::string fileID = extractFileID(config_.inputFileName);
+    setSPEResult(config_.inputSPECalibrationPath);
     const int MAX_SAMPLE_SIZE = 3000;
     TFile *inputFile = new TFile(config_.inputFileName.c_str());
     TTree *inputTree = (TTree *)inputFile->Get("daq");
@@ -591,8 +592,9 @@ void DataProcessor::dailyCheck() {
             } catch (...) {
                 continue;
             }
-            double spe = (spe_mean_.count(ch_name) > 0) ? spe_mean_[ch_name]
-                                                        : 0.267534455;
+            double spe = (spe_mean_.count(ch_name) > 0) ? spe_mean_[ch_name] : 0.267534455;
+            if (spe == 0)
+                spe = 0.267534455;
             wf.setAmpPE(spe);
             wf.correctDaisyChainTrgDelay(ch_name);
 
@@ -606,11 +608,8 @@ void DataProcessor::dailyCheck() {
                                std::plus<double>());
             }
 
-            if (wf.getAmpPE().size() == 0)
-                continue;
-
             // Calculate PE value for the channel and fill its histogram
-            double pe_value = wf.getPE(0, wf.getAmpPE().size() - 1, spe_mean_[ch_name]);
+            double pe_value = wf.getPE(0, wf.getAmpPE().size() - 1, spe);
             pe_[ch_name].push_back(pe_value);
             schn[i] = pe_value;
             histPMTPE[ch_name]->Fill(pe_value);
