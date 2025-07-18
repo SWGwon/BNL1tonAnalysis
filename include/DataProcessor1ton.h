@@ -15,6 +15,7 @@ struct PMTData1ton {
     std::vector<std::unique_ptr<UShort_t[]>> alphaPMT;
     std::vector<std::unique_ptr<UShort_t[]>> topPaddles;
     std::vector<std::unique_ptr<UShort_t[]>> botPaddle;
+    std::vector<std::unique_ptr<UShort_t[]>> hodoscopes;
 };
 
 struct EventSelectionResult1ton {
