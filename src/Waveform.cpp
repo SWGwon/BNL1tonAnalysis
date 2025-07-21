@@ -179,7 +179,7 @@ bool Waveform::hasPeakAboveThreshold(double threshold) {
 double Waveform::getCharge(int integrateStart, int integrateEnd) const {
     const auto& ampMV = getAmpMV();
     if (integrateStart < 0 || integrateEnd >= static_cast<int>(ampMV.size()) || integrateStart > integrateEnd) {
-        std::cerr << "Error (Waveform::getPE): Invalid integration range." << std::endl;
+        std::cerr << "Error (Waveform::getCharge): Invalid integration range." << std::endl;
         return 0.0;
     }
 
@@ -236,87 +236,8 @@ void Waveform::correctDaisyChainTrgDelay(const std::string &ch_name, int dt_ns,
     };
 
     slice_vector(amp_pe_);
+    slice_vector(amp_mv_);
     slice_vector(samples_);
-
-    /*
-    if (amp_pe_.empty()) {
-        std::cerr << "amp_pe_ is empty, cannot correct delay." << std::endl;
-        return;
-    }
-    std::vector<double> corrected;
-    std::vector<double> corrected_samples;
-    if (ch_name.find("_b1") != std::string::npos) {
-        if (amp_pe_.size() > static_cast<size_t>(dS * 3))
-            corrected =
-                std::vector<double>(amp_pe_.begin() + dS * 3, amp_pe_.end());
-        else {
-            std::cerr << "Not enough samples for _b1 correction" << std::endl;
-            return;
-        }
-        if (samples_.size() > static_cast<size_t>(dS * 3))
-            corrected_samples =
-                std::vector<double>(samples_.begin() + dS * 3, samples_.end());
-        else {
-            std::cerr << "Not enough samples for _b1 correction" << std::endl;
-            return;
-        }
-    } else if (ch_name.find("_b2") != std::string::npos) {
-        if (amp_pe_.size() > static_cast<size_t>(dS * 3))
-            corrected = std::vector<double>(amp_pe_.begin() + dS * 2,
-                                            amp_pe_.end() - dS);
-        else {
-            std::cerr << "Not enough samples for _b2 correction" << std::endl;
-            return;
-        }
-        if (samples_.size() > static_cast<size_t>(dS * 3))
-            corrected_samples = std::vector<double>(samples_.begin() + dS * 2,
-                                            samples_.end() - dS);
-        else {
-            std::cerr << "Not enough samples for _b2 correction" << std::endl;
-            return;
-        }
-    } else if (ch_name.find("_b3") != std::string::npos) {
-        if (amp_pe_.size() > static_cast<size_t>(dS * 3))
-            corrected = std::vector<double>(amp_pe_.begin() + dS,
-                                            amp_pe_.end() - dS * 2);
-        else {
-            std::cerr << "Not enough samples for _b3 correction" << std::endl;
-            return;
-        }
-        if (samples_.size() > static_cast<size_t>(dS * 3))
-            corrected_samples = std::vector<double>(samples_.begin() + dS,
-                                            samples_.end() - dS * 2);
-        else {
-            std::cerr << "Not enough samples for _b3 correction" << std::endl;
-            return;
-        }
-    } else if (ch_name.find("_b4") != std::string::npos ||
-               ch_name.find("_b5") != std::string::npos) {
-        if (amp_pe_.size() > static_cast<size_t>(dS * 3))
-            corrected =
-                std::vector<double>(amp_pe_.begin(), amp_pe_.end() - dS * 3);
-        else {
-            std::cerr << "Not enough samples for _b4/_b5 correction"
-                      << std::endl;
-            return;
-        }
-        if (samples_.size() > static_cast<size_t>(dS * 3))
-            corrected_samples =
-                std::vector<double>(samples_.begin(), samples_.end() - dS * 3);
-        else {
-            std::cerr << "Not enough samples for _b4/_b5 correction"
-                      << std::endl;
-            return;
-        }
-    } else {
-        std::cerr << "ERROR in correctDaisyChainTrgDelay: invalid boardId in "
-                     "channel name "
-                  << ch_name << std::endl;
-        return;
-    }
-    amp_pe_ = corrected;
-    samples_ = corrected_samples;
-    */
 }
 
 // Converts amp_pe_ data into a TGraph and returns it.
