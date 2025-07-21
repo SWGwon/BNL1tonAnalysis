@@ -282,25 +282,24 @@ event_id) {
     }
 
     if (config_.triggerType == -1) {
-        Waveform top_top_hodoscope(pmtData.hodoscopes[2].get());
-        top_top_hodoscope.subtractFlatBaseline(0,top_top_hodoscope.getSamples().size() - 1);
-        double top_top_charge = top_top_hodoscope.getCharge(0,top_top_hodoscope.getSamples().size() - 1);
+        auto getHodoscopeCharge = [&](int index) {
+            Waveform hodoscope(pmtData.hodoscopes[index].get());
+            hodoscope.subtractFlatBaseline(0, hodoscope.getSamples().size() - 1);
+            return hodoscope.getCharge(0, hodoscope.getSamples().size() - 1);
+        };
 
-        Waveform top_bot_hodoscope(pmtData.hodoscopes[15].get());
-        top_bot_hodoscope.subtractFlatBaseline(0,top_bot_hodoscope.getSamples().size() - 1);
-        double top_bot_charge = top_bot_hodoscope.getCharge(0,top_bot_hodoscope.getSamples().size() - 1);
+        const double HODOSCOPE_THRESHOLD = 0.2;
+        bool top_top_fired = getHodoscopeCharge(2) > HODOSCOPE_THRESHOLD || getHodoscopeCharge(3) > HODOSCOPE_THRESHOLD;
+        bool top_bot_fired = getHodoscopeCharge(15) > HODOSCOPE_THRESHOLD || getHodoscopeCharge(14) > HODOSCOPE_THRESHOLD;
+        bool bot_top_fired = getHodoscopeCharge(17) > HODOSCOPE_THRESHOLD || getHodoscopeCharge(18) > HODOSCOPE_THRESHOLD;
+        bool bot_bot_fired = getHodoscopeCharge(28) > HODOSCOPE_THRESHOLD || getHodoscopeCharge(27) > HODOSCOPE_THRESHOLD;
 
-        Waveform bot_top_hodoscope(pmtData.hodoscopes[17].get());
-        bot_top_hodoscope.subtractFlatBaseline(0,bot_top_hodoscope.getSamples().size() - 1);
-        double bot_top_charge = bot_top_hodoscope.getCharge(0,bot_top_hodoscope.getSamples().size() - 1);
-
-        Waveform bot_bot_hodoscope(pmtData.hodoscopes[28].get());
-        bot_bot_hodoscope.subtractFlatBaseline(0,bot_bot_hodoscope.getSamples().size() - 1);
-        double bot_bot_charge = bot_bot_hodoscope.getCharge(0,bot_bot_hodoscope.getSamples().size() - 1);
-        if (top_top_charge < 0.2 || top_bot_charge < 0.2 || bot_top_charge < 0.2 || bot_bot_charge < 0.2)
+        if (!top_top_fired || !top_bot_fired || !bot_top_fired || !bot_bot_fired) {
             return result;
-        else
+        }
+        else {
             std::cout << "hodoscope event " << event_id << " selected" << std::endl;
+        }
     }
 
     result.isSelected = true;
@@ -344,8 +343,7 @@ int DataProcessor1ton::findPeakTime(const std::vector<Waveform>& waveforms) {
 
     std::vector<double> summedWaveform(waveforms[0].getSamples().size(), 0.0);
     for (const auto& wf : waveforms) {
-        // getAmpPE 대신 mV 단위 파형을 합산 (PE는 spe_mean에 따라 스케일이 다르므로)
-        const auto& samples = wf.getAmpMV();
+        const auto& samples = wf.getSamples();
         for (size_t i = 0; i < samples.size(); ++i) {
             summedWaveform[i] += samples[i];
         }

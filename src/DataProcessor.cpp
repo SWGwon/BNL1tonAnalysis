@@ -601,11 +601,24 @@ void DataProcessor::dailyCheck() {
             // Sum waveforms for channels of interest (channels 1 to 30)
             if (i == 1) {
                 summedWaveform = wf.getAmpPE();
+                if (summedWaveform.size() != 888)
+                    continue;
             } else if (i > 1 && i < 31) {
                 std::vector<double> tempWf = wf.getAmpPE();
-                std::transform(summedWaveform.begin(), summedWaveform.end(),
-                               tempWf.begin(), summedWaveform.begin(),
-                               std::plus<double>());
+                //std::transform(summedWaveform.begin(), summedWaveform.end(),
+                //               tempWf.begin(), summedWaveform.begin(),
+                //               std::plus<double>());
+                if (summedWaveform.size() != tempWf.size()) {
+                    // Print a warning to the console and skip this mismatched channel.
+                    std::cerr << "Warning: Mismatched waveform size at channel " << i
+                        << ". Expected " << summedWaveform.size()
+                        << ", but got " << tempWf.size() << ". Skipping addition." << std::endl;
+                } else {
+                    // The sizes are equal, so it's safe to perform the element-wise addition.
+                    std::transform(summedWaveform.begin(), summedWaveform.end(),
+                            tempWf.begin(), summedWaveform.begin(),
+                            std::plus<double>());
+                }
             }
 
             // Calculate PE value for the channel and fill its histogram
