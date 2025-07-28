@@ -302,6 +302,36 @@ event_id) {
         }
     }
 
+    //top paddle + bot hodo
+    if (config_.triggerType == -2) {
+        auto getHodoscopeCharge = [&](int index) {
+            Waveform hodoscope(pmtData.hodoscopes[index].get());
+            hodoscope.subtractFlatBaseline(0, hodoscope.getSamples().size() - 1);
+            return hodoscope.getCharge(0, hodoscope.getSamples().size() - 1);
+        };
+
+        Waveform tp1(pmtData.topPaddles[0].get());
+        Waveform tp2(pmtData.topPaddles[1].get());
+        bool top_paddle_fired = false;
+        if (Waveform::hasValueLessThan(tp1.getSamples(), ADC_SATURATION_VALUE) &&
+            Waveform::hasValueLessThan(tp2.getSamples(), ADC_SATURATION_VALUE)) {
+            top_paddle_fired = true;
+        }
+
+        const double HODOSCOPE_THRESHOLD = 0.2;
+        //bool top_top_fired = getHodoscopeCharge(2) > HODOSCOPE_THRESHOLD || getHodoscopeCharge(3) > HODOSCOPE_THRESHOLD;
+        //bool top_bot_fired = getHodoscopeCharge(15) > HODOSCOPE_THRESHOLD || getHodoscopeCharge(14) > HODOSCOPE_THRESHOLD;
+        bool bot_top_fired = getHodoscopeCharge(17) > HODOSCOPE_THRESHOLD || getHodoscopeCharge(18) > HODOSCOPE_THRESHOLD;
+        bool bot_bot_fired = getHodoscopeCharge(28) > HODOSCOPE_THRESHOLD || getHodoscopeCharge(27) > HODOSCOPE_THRESHOLD;
+
+        if (!top_paddle_fired || !bot_top_fired || !bot_bot_fired) {
+            return result;
+        }
+        else {
+            std::cout << "hodoscope event " << event_id << " selected" << std::endl;
+        }
+    }
+
     result.isSelected = true;
     return result;
 }
