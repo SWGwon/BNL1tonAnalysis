@@ -117,8 +117,8 @@ void DataProcessor1ton::saveRootOutput() {
 
     TFile* outputFile = nullptr;
     // Create the output ROOT file.
-    if (config_.triggerType == -1)
-        outputFile = new TFile((config_.outputFilePath + "/output_all_event_" + fileID + ".root").c_str(), "RECREATE");
+    if (config_.triggerType == -1 || config_.triggerType == -2)
+        outputFile = new TFile((config_.outputFilePath + "/output_hodo_event_" + fileID + ".root").c_str(), "RECREATE");
     if (config_.triggerType == 0)
         outputFile = new TFile((config_.outputFilePath + "/output_top_paddle_" + fileID + ".root").c_str(), "RECREATE");
     if (config_.triggerType == 1)
